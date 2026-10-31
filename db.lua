@@ -13,7 +13,7 @@ function Db:checkIfPathIsSet()
 end
 
 function Db:setPath(path)
-    self.dbPath = "database/"..path.."/"
+    self.dbPath = "/database/"..path.."/"
 end
 
 function Db:getById(id)
@@ -25,18 +25,22 @@ function Db:getById(id)
             local data = file:read("*a")
             file:close()
             return serialize.unserialize(data)
-        else 
+        else
+            log.error("Could not open file: "..id)
+            error("Could not open file: "..id)
             return nil
         end
     else
+        log.error("Could not find file: "..id)
+        error("Could not find file: "..id)
         return nil
     end
 end
 
-function Db:addObject(object,id)
+function Db:addObject(object, id)
         self:checkIfPathIsSet()
 
-        local file = io.open(self.dbPath..id, 'w')
+        local file = io.open(self.dbPath..id, "w")
 
         if file == nil then
             log.error("Could not create file: "..id)
@@ -46,6 +50,12 @@ function Db:addObject(object,id)
         local serializedData = serialize.serialize(object)
         file:write(serializedData)
         file:close()
+end
+
+function Db:objectExists(id)
+    self:checkIfPathIsSet()
+
+    return fs.exists(Db.dbPath..id)
 end
 
 return Db

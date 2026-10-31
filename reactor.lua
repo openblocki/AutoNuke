@@ -50,11 +50,26 @@ local function getCoolantSlot()
 end
 
 ------------------------------------------------------------------------
+----- DB STUFF
+
+local function getReactorFromDB()
+    return db:getById(reactor.reactor_chamber_address)
+end
+
+local function addReactorToDB()
+    local data_reactor = {
+        reactor_chamber = reactor.reactor_chamber_address,
+        transposer = reactor.transposer_address
+    }
+    db:addObject(data_reactor, data_reactor.reactor_chamber)
+end
+------------------------------------------------------------------------
 -----INIT
 local function loadReactor()
     for a, n in component.list("reactor_chamber", true) do
         log.info("Reactor Chamber: " .. a)
         reactor.reactor_chamber = component.proxy(a)
+        reactor.reactor_chamber_address = a
     end
 end
 
@@ -123,8 +138,8 @@ local function setup()
 
     log.info("Reactor Setup Complete!")
 end
-db:setPath("reactors")
+
 setup()
-db:addObject(reactor)
-log.beautify("Checking if Reactor was added to DB")
-db:getById(reactor.reactor_chamber_address)
+db:setPath("reactors")
+
+addReactorToDB()
