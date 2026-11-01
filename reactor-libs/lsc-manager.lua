@@ -49,8 +49,13 @@ local function needsPower()
     return false
 end
 
+local function getLSC()
+    return lsc
+end
+
 return {
     tick = tick,
     setup = setup,
-    needsPower = needsPower
+    needsPower = needsPower,
+    getLSC = getLSC
 }
