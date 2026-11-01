@@ -43,10 +43,6 @@ end
 
 ------------------------------------------------------------------------
 ----- DB STUFF
-local function getReactorFromDB()
-    return db:getById("500e695a-00dc-45b4-9741-4975f58737d0")
-end
-
 local function addReactorToDB(data, id)
     db:addObject(data, id)
 end
@@ -64,6 +60,8 @@ local function loadReactor(adapter, transposer, redstone_io)
             redstone_io = redstone_io
         }
     }
+
+    addReactorToDB(reactor.data, adapter)
     reactors[adapter] = reactor
 end
 
@@ -102,17 +100,7 @@ end
 local function resolveUnknownReactors()
     for k, v in pairs(unknown_reactors) do
         term.clear()
-        for x, y in pairs(transposers) do
-            log.beautify("Transposer")
-            log.beautify(x)
-            log.beautify(y)
-        end
-        for x, y in pairs(redstone_ios) do
-            log.beautify("Redstone IOS")
-            log.beautify(x)
-            log.beautify(y)
-        end
-
+     
         local transposer, tKey = t_helper.multiSelectNoDefault("Transposer for Reactor "..v, transposers)
         local redstone_io, rKey = t_helper.multiSelectNoDefault("Redstone IO for Reactor "..v, redstone_ios)
 

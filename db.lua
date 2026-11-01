@@ -39,7 +39,8 @@ end
 
 function Db:addObject(object, id)
         self:checkIfPathIsSet()
-
+        
+        log.info("Creating DB Object")
         local file = io.open(self.dbPath..id, "w")
 
         if file == nil then
@@ -48,7 +49,9 @@ function Db:addObject(object, id)
         end
 
         local serializedData = serialize.serialize(object)
+        log.info("Writing Data")
         file:write(serializedData)
+        log.info("Saving File")
         file:close()
 end
 
