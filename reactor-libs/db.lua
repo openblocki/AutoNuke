@@ -1,4 +1,4 @@
-local log = require("log")
+local log = require("reactor-libs.log")
 local fs = require("filesystem")
 local serialize = require("serialization")
 

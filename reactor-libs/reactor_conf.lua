@@ -10,6 +10,15 @@ return {
         SIDE = sides.bottom
     },
 
+    REDSTONEIO = {
+        SIDE = sides.top
+    },
+
+    LSC = {
+        POWERMIN = 0.6,
+        POWERMAX = 0.8
+    },
+
     INTERFACE = {
         SIDE = sides.top,
         COOLANT = {

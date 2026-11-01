@@ -1,9 +1,9 @@
 local component = require("component")
-local log = require("log")
-local c = require("reactor_conf")
-local t_helper = require("term_helper")
+local log = require("reactor-libs.log")
+local c = require("reactor-libs.reactor_conf")
+local t_helper = require("reactor-libs.term_helper")
 local term = require("term")
-local DB = require("db")
+local DB = require("reactor-libs.db")
 local db = DB:new()
 local configdb = DB:new()
 ------------------------------------------------------------------------
@@ -74,19 +74,31 @@ local function insertFuelRodInSlot(slot, address)
 end
 
 local function removeAllFuelRods(transposer)
-    
+    local slot = 1
+    for item in transposer.getAllStacks(c.REACTOR.SIDE) do
+        if item.name == R then
+            transposer.transferItem(c.REACTOR.SIDE, c.INTERFACE.SIDE, 1, slot, 9)
+        end
+        slot = slot + 1
+    end
 end
 
 local function removeAllCoolant(transposer)
-    
+    local slot = 1
+    for item in transposer.getAllStacks(c.REACTOR.SIDE) do
+        if item.name == C then
+            transposer.transferItem(c.REACTOR.SIDE, c.INTERFACE.SIDE, 1, slot, 9)
+        end
+        slot = slot + 1
+    end
 end
 
 local function sendShutdownToNetwork() -- These Events allow other Programs to Receive the info that the Reactors have Shut Down
    local modem = require("modem")
    local event = require("event")
 
-   modem.broadcast(0, "AN/E-SHUTDOWN") -- Entire Network the Computer is Connected to
-   event.push("AN/E-SHUTDOWN") -- Same Computer
+   modem.broadcast(0, "AN/E-SHUTDOWN")
+   event.push("AN/E-SHUTDOWN")
 end
 
 local function SCRAM()
@@ -116,15 +128,17 @@ end
 
 ------------------------------------------------------------------------
 -----LOAD / STARTUP
-local function loadReactor(adapter, transposer, redstone_io)
+local function loadReactor(adapter, transposer, redstone_io, override)
     local reactor = {
         reactor_chamber = component.proxy(adapter),
         transposer = component.proxy(transposer),
         redstone_io = component.proxy(redstone_io),
+        override = override,
         data = {
             adapter = adapter,
             transposer = transposer,
-            redstone_io = redstone_io
+            redstone_io = redstone_io,
+            override = override,
         }
     }
 
@@ -147,7 +161,7 @@ local function loadReactors()
                 log.error("Reactor could not be Retrieved from DB")
                 error("Reactor could not be Retrieved from DB")
             end
-            loadReactor(data.adapter, data.transposer, data.redstone_io)
+            loadReactor(data.adapter, data.transposer, data.redstone_io, data.override)
             log.info("Reactor successfully loaded!")
         else
             log.info("Reactor not Found in DB. Adding to Queue")
@@ -199,6 +213,28 @@ local function getRedstoneIOs()
     end
 end
 
+local function tick_reactor(reactor)
+
+    if reactor.redstone_io.getOutput(c.REDSTONEIO.SIDE) > 0 then
+        log.info("Reactor "..reactor.reactor_chamber.address.." is active")
+        -- Check Heat
+        -- Check Coolant Status
+        -- Check Fuel Rod Status
+    else
+        -- Check if can Start up again
+    end
+end
+
+local function tick_all()
+    for k,v in pairs(reactors) do
+        if v.override then goto next end
+        tick_reactor(v)
+
+        ::next::
+    end
+
+    log.info("Ticked Reactors")
+end
 
 ------------------------------------------------------------------------
 -----SETUP
@@ -256,4 +292,11 @@ local function setup()
     return 1
 end
 
-return {setup = setup, shutDownRedstoneIOs = shutDownRedstoneIOs, changeCoolantForSlot = changeCoolantForSlot, insertFuelRodInSlot, SCRAM = SCRAM}
+return {
+    setup = setup,
+    shutDownRedstoneIOs = shutDownRedstoneIOs,
+    changeCoolantForSlot = changeCoolantForSlot,
+    insertFuelRodInSlot = insertFuelRodInSlot,
+    SCRAM = SCRAM,
+    tick_all = tick_all
+}
