@@ -33,6 +33,33 @@ return {
         log.longSplit() 
 
         return options[optionKeys[userInput]]
+    end,
+    multiSelectNoDefault = function (label, options)
+                log.longSplit()
+        log.beautify("Please Select ".. label)
+
+        ::selector::
+        for k, v in pairs(options) do
+            log.beautify(k..". "..v)
+        end
+        log.beautify("No Default")
+
+        local userInput = io.read()
+        userInput = tonumber(userInput)
+        
+        if userInput == nil then
+            log.beautify("No Input. Try Again.")
+            goto selector
+        end
+
+        if userInput <= 0 or userInput > #options then
+            log.beautify("Input Out of Bounds. Try Again.")
+            goto selector
+        end
+
+        log.longSplit()
+
+        return options[userInput], userInput
     end
 
 }
