@@ -126,7 +126,6 @@ end
 local function getTransposers()
     local count = 1
     for a, n in component.list("transposer", true) do
-        log.info("Transposer "..count..": " .. a)
         transposers[count] = a
         count = count + 1
     end
@@ -135,7 +134,6 @@ end
 local function getRedstoneIOs()
     local count = 1
     for a, n in component.list("redstone", true) do
-        log.info("Redstone IO "..count..": " .. a)
         redstone_ios[count] = a
         count = count + 1
     end
