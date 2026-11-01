@@ -2,9 +2,16 @@ local log = require("log")
 local fs = require("filesystem")
 local serialize = require("serialization")
 
-Db =  {
+local Db =  {
     dbPath = nil
 }
+
+function Db:new (o)
+    o = o or {}   -- create object if user does not provide one
+    setmetatable(o, self)
+    self.__index = self
+    return o
+end
 
 function Db:checkIfPathIsSet()
     if self.dbPath then return end
@@ -58,7 +65,7 @@ end
 function Db:objectExists(id)
     self:checkIfPathIsSet()
 
-    return fs.exists(Db.dbPath..id)
+    return fs.exists(self.dbPath..id)
 end
 
 return Db

@@ -3,13 +3,14 @@ local log = require("log")
 local c = require("reactor_conf")
 local t_helper = require("term_helper")
 local term = require("term")
-local db = require("db")
+local DB = require("db")
+local db = DB:new()
+local configdb = DB:new()
 
 local reactors = {}
 local transposers = {}
 local redstone_ios = {}
 local unknown_reactors = {}
-
 local INTERFACE_COOLANT_SLOT = 1
 
 ------------------------------------------------------------------------
@@ -150,6 +151,8 @@ end
 
 local function setup()
     db:setPath("reactors")
+    configdb:setPath("config")
+
     getTransposers()
     getRedstoneIOs()
     loadReactors()
