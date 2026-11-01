@@ -48,11 +48,11 @@ function Db:addObject(object, id)
         self:checkIfPathIsSet()
         
         log.info("Creating DB Object")
-        local file = io.open(self.dbPath..id, "w")
+        local file, err = fs.open(self.dbPath..id, "w")
 
         if file == nil then
-            log.error("Could not create file: "..id)
-            error("Could not create file: "..id)
+            log.error("Could not create file: "..id..". ERROR: ".. err)
+            error("Could not create file: "..id..". ERROR: ".. err)
         end
 
         local serializedData = serialize.serialize(object)

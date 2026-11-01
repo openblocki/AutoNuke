@@ -2,6 +2,10 @@ local gt = "gregtech:gt."
 local sides = require("sides")
 
 return {
+    CONFIG = {
+        ID = "wb54z6"
+    },
+
     REACTOR = {
         SIDE = sides.bottom
     },

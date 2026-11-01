@@ -13,13 +13,14 @@ local redstone_ios = {}
 local unknown_reactors = {}
 local INTERFACE_COOLANT_SLOT = 1
 
+local config = {}
+
 ------------------------------------------------------------------------
 ----- STATICS
-local C = c.COOLANT.HELIUM
-local R = c.ROD.GLOWSTONE
+local C = nil
+local R = nil
 
 local layout = {}
-
 
 local function resetLayout()
     layout = { C, R, R, R, C, R, R, C, R,
@@ -29,7 +30,6 @@ local function resetLayout()
         R, C, R, R, R, R, C, R, R,
         R, C, R, R, C, R, R, R, C }
 end
-resetLayout()
 
 ------------------------------------------------------------------------
 -----HELPERS
@@ -42,14 +42,27 @@ local function getCoolantSlot()
     return INTERFACE_COOLANT_SLOT + c.INTERFACE.COOLANT.OFFSET
 end
 
-------------------------------------------------------------------------
------ DB STUFF
-local function addReactorToDB(data, id)
-    db:addObject(data, id)
+local function changeCoolantForSlot(slot, address)
+    local if_slot = getCoolantSlot()
+    log.info("Changing Coolant for Reactor "..address.. ": " ..if_slot .. "->" .. slot)
+    reactors[address].transposer.swap(c.INTERFACE.SIDE, c.REACTOR.SIDE, if_slot, slot)
 end
-------------------------------------------------------------------------
------LOAD
 
+local function insertFuelRodInSlot(slot, address)
+    log.verbose("Getting rSlot " .. slot)
+    local rSlot = reactors[address].transposer.getStackInSlot(c.REACTOR.SIDE, slot)
+    log.verbose("Got rSlot")
+    if rSlot ~= nil then
+        log.verbose("rSlot not nil")
+        reactors[address].transposer.transferItem(c.REACTOR.SIDE, c.INTERFACE.SIDE, 1, slot, 9)
+    end
+    log.verbose("Transfering Rod")
+    reactors[address].transposer.transferItem(c.INTERFACE.SIDE, c.REACTOR.SIDE, 1, 1, slot)
+    log.verbose("Transfered Rod")
+end
+
+------------------------------------------------------------------------
+-----LOAD / STARTUP
 local function loadReactor(adapter, transposer, redstone_io)
     local reactor = {
         reactor_chamber = component.proxy(adapter),
@@ -62,7 +75,7 @@ local function loadReactor(adapter, transposer, redstone_io)
         }
     }
 
-    addReactorToDB(reactor.data, adapter)
+    db:addObject(reactor.data, adapter)
     reactors[adapter] = reactor
 end
 
@@ -77,10 +90,9 @@ local function loadReactors()
                 error("Reactor could not be Retrieved from DB")
             end
             loadReactor(data.adapter, data.transposer, data.redstone_io)
-
         else
             log.info("Reactor not Found in DB. Adding to Queue")
-            unknown_reactors[#unknown_reactors+1] = a
+            unknown_reactors[#unknown_reactors + 1] = a
         end
     end
 
@@ -101,9 +113,9 @@ end
 local function resolveUnknownReactors()
     for k, v in pairs(unknown_reactors) do
         term.clear()
-     
-        local transposer, tKey = t_helper.multiSelectNoDefault("Transposer for Reactor "..v, transposers)
-        local redstone_io, rKey = t_helper.multiSelectNoDefault("Redstone IO for Reactor "..v, redstone_ios)
+
+        local transposer, tKey = t_helper.multiSelectNoDefault("Transposer for Reactor " .. v, transposers)
+        local redstone_io, rKey = t_helper.multiSelectNoDefault("Redstone IO for Reactor " .. v, redstone_ios)
 
         loadReactor(v, transposer, redstone_io)
         table.remove(transposers, tKey)
@@ -130,28 +142,11 @@ end
 
 ------------------------------------------------------------------------
 -----SETUP
-local function insertFuelRodInSlot(slot, address)
-    log.verbose("Getting rSlot " .. slot)
-    local rSlot = reactors[address].transposer.getStackInSlot(c.REACTOR.SIDE, slot)
-    log.verbose("Got rSlot")
-    if rSlot ~= nil then
-        log.verbose("rSlot not nil")
-        reactors[address].transposer.transferItem(c.REACTOR.SIDE, c.INTERFACE.SIDE, 1, slot, 9)
-    end
-    log.verbose("Transfering Rod")
-    reactors[address].transposer.transferItem(c.INTERFACE.SIDE, c.REACTOR.SIDE, 1, 1, slot)
-    log.verbose("Transfered Rod")
-end
-
-local function changeCoolantForSlot(slot, address)
-    local if_slot = getCoolantSlot()
-    log.warn(if_slot.." & "..slot)
-    reactors[address].transposer.swap(c.INTERFACE.SIDE, c.REACTOR.SIDE, if_slot, slot)
-end
-
 local function setup()
     db:setPath("reactors")
     configdb:setPath("config")
+
+    config = configdb:getById(c.CONFIG.ID)
 
     getTransposers()
     getRedstoneIOs()
@@ -161,39 +156,41 @@ local function setup()
 
     local address = "500e695a-00dc-45b4-9741-4975f58737d0"
 
-    R = t_helper.multiSelect("DEFAULT FUEL ROD", c.ROD, "GLOWSTONE", c.ROD.GLOWSTONE)
-    C = t_helper.multiSelect("DEFAULT COOLANT", c.COOLANT, "HELIUM", c.COOLANT.HELIUM)
+    R = t_helper.multiSelect("DEFAULT FUEL ROD", c.ROD, config.DEFAULT_ROD_NAME, config.DEFAULT_ROD)
+    C = t_helper.multiSelect("DEFAULT COOLANT", c.COOLANT, config.DEFAULT_COOLANT_NAME, config.DEFAULT_COOLANT)
+
     resetLayout()
 
-    local inv = reactors[address].transposer.getAllStacks(c.REACTOR.SIDE)
+    for k, v in pairs(reactors) do
+        local inv = reactors[address].transposer.getAllStacks(c.REACTOR.SIDE)
 
-    ::fillReactor::
-    local successfull_finish = true
-    local slot = 1
+        ::fillReactor::
+        local successfull_finish = true
+        local slot = 1
 
-    for item in inv do
-        if item.name ~= layout[slot] then
-            successfull_finish = false
-            log.verbose("Slot Mismatch!")
-            log.verbose("Should Be: " .. layout[slot])
-            log.verbose("Is: ", item.name)
+        for item in inv do
+            if item.name ~= layout[slot] then
+                successfull_finish = false
+                log.verbose("Slot Mismatch!")
+                log.verbose("Should Be: " .. layout[slot])
+                log.verbose("Is: ", item.name)
 
-            if layout[slot] == C then
-                changeCoolantForSlot(slot, address)
-            else
-                insertFuelRodInSlot(slot, address)
+                if layout[slot] == C then
+                    changeCoolantForSlot(slot, address)
+                else
+                    insertFuelRodInSlot(slot, address)
+                end
+
+                log.split()
             end
 
-            log.split()
+            slot = slot + 1
         end
 
-        slot = slot + 1
+        if not successfull_finish then
+            goto fillReactor
+        end
     end
-
-    if not successfull_finish then
-        goto fillReactor
-    end
-
     log.info("Reactor Setup Complete!")
 end
 
