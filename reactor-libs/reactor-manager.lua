@@ -252,6 +252,8 @@ local function setup()
         end
     end
     log.info("Reactor Setup Complete!")
+
+    return 1
 end
 
 return {setup = setup, shutDownRedstoneIOs = shutDownRedstoneIOs, changeCoolantForSlot = changeCoolantForSlot, insertFuelRodInSlot, SCRAM = SCRAM}
