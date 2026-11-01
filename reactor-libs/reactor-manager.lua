@@ -55,9 +55,25 @@ local function getCoolantSlot()
 end
 
 local function changeCoolantForSlot(slot, address)
+    local transposer = reactors[address].transposer
+    local counter = 0
+    ::retryCoolant::
     local if_slot = getCoolantSlot()
     log.info("Changing Coolant for Reactor "..address.. ": " ..if_slot .. "->" .. slot)
-    reactors[address].transposer.swap(c.INTERFACE.SIDE, c.REACTOR.SIDE, if_slot, slot)
+
+    if not transposer.getStackInSlot(if_slot) then
+        if counter > 5 then
+            log.error("Could not swap Coolant for Reactor ".. address.." after multiple times. Overriding Reactor")
+            log.info("To ReEnable Reactor use Console")
+            --TODO Add Reactor Override
+        end
+        log.warn("No Coolant found in Interface Slot "..if_slot.. ". Try "..counter)
+        log.info("Trying next slot")
+        counter = counter + 1
+        goto retryCoolant
+    end
+
+    transposer.swap(c.INTERFACE.SIDE, c.REACTOR.SIDE, if_slot, slot)
 end
 
 local function insertFuelRodInSlot(slot, address)

@@ -2,7 +2,7 @@ local m_reactor = require("reactor-libs.reactor-manager")
 local m_lsc = require("reactor-libs.lsc-manager")
 local log = require("reactor-libs.log")
 local component =  require("component")
-local colors = require("colors")
+local term = require("term")
 local gpu = component.gpu
 
 local keepAlive = false
@@ -62,9 +62,8 @@ local function main()
     local function protected_main()
         local width = 160
         local height = 50
-        gpu.freeAllBuffers()
         gpu.setResolution(width,height)
-        gpu.fill(1, 1, width, height, " ")  -- Clear screen
+        gpu.fill(1, 1, width, height, " ")
         setupWidgedBorders()
 
         gpu.setForeground(0x0e6900)
@@ -111,4 +110,5 @@ local function main()
     m_reactor.shutDownRedstoneIOs()
 end
 
+term.clear()
 main()
