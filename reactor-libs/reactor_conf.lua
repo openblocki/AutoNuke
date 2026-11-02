@@ -7,7 +7,12 @@ return {
     },
 
     REACTOR = {
-        SIDE = sides.bottom
+        SIDE = sides.bottom,
+        HEAT = {
+            MAX = 10000, -- NOT ACTUAL VALUE YET
+            THRESHOLD = 0.5,
+            THRESHOLD_MOX = 0.95,
+        }
     },
 
     REDSTONEIO = {
@@ -41,5 +46,10 @@ return {
         HD_URANIUM = gt.."rodHighDensityUranium4",
         EXCITED_URANIUM = gt.."rodExcitedUranium4",
         HD_PLUTONIUM = gt.."rodHighDensityPlutonium4"
+    },
+
+    DEFAULT = {
+        COOLANT = "HELIUM",
+        ROD = "GLOWSTONE"
     }
 }

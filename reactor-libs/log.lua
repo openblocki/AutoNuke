@@ -16,6 +16,7 @@ local INFO = "INFO"
 local WARN = "WARN"
 local ERROR = "ERROR"
 local VERBOSE = "VERBOSE"
+local SCRAM = "!SCRAM!"
 
 local function draw()
   gpu.setBackground(0x6a7a94)
@@ -32,6 +33,8 @@ local function draw()
       gpu.setForeground(0xc41f02)
     elseif v.data == VERBOSE then
       gpu.setForeground(0x665685)
+    elseif v.data == SCRAM then
+      gpu.setForeground(0xfc0303)
     end
     gpu.set(left,top+k-1,message)
   end
@@ -59,6 +62,7 @@ return {
 
   error = function(m)
     log({message = m, data = ERROR})
+    draw()
   end,
 
   verbose = function(m)
@@ -67,6 +71,19 @@ return {
       caller.name = "main"
     end
     log({message = "|" .. caller.name .. "| " .. m, data = VERBOSE})
+  end,
+
+  vWarn = function(m)
+    local caller = debug.getinfo(3, "n")
+    if caller.name == nil then
+      caller.name = "main"
+    end
+    log({message = "|" .. caller.name .. "| " .. m, data = WARN})
+  end,
+
+  scram = function(m)
+    log({message = m, data = SCRAM})
+    draw()
   end,
 
   split = function()

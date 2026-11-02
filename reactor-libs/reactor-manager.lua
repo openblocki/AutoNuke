@@ -4,8 +4,10 @@ local c = require("reactor-libs.reactor_conf")
 local t_helper = require("reactor-libs.term_helper")
 local term = require("term")
 local DB = require("reactor-libs.db")
+local event = require("event")
 local db = DB:new()
 local configdb = DB:new()
+
 ------------------------------------------------------------------------
 -----SAFETY
 
@@ -45,7 +47,7 @@ end
 
 ------------------------------------------------------------------------
 -----HELPERS
-local function getCoolantSlot()
+local function getCoolantSlot() -- Deprecated
     INTERFACE_COOLANT_SLOT = INTERFACE_COOLANT_SLOT + 1
 
     if INTERFACE_COOLANT_SLOT > c.INTERFACE.COOLANT.RANGE then
@@ -54,7 +56,7 @@ local function getCoolantSlot()
     return INTERFACE_COOLANT_SLOT + c.INTERFACE.COOLANT.OFFSET
 end
 
-local function changeCoolantForSlot(slot, address)
+local function changeCoolantForSlot(slot, address) -- Deprecated
     local transposer = reactors[address].transposer
     local counter = 0
     ::retryCoolant::
@@ -89,7 +91,7 @@ local function insertFuelRodInSlot(slot, address)
     log.verbose("Transfered Rod")
 end
 
-local function removeAllFuelRods(transposer)
+local function removeAllFuelRods(transposer) -- Deprecated
     local slot = 1
     for item in transposer.getAllStacks(c.REACTOR.SIDE) do
         if item.name == R then
@@ -99,7 +101,7 @@ local function removeAllFuelRods(transposer)
     end
 end
 
-local function removeAllCoolant(transposer)
+local function removeAllCoolant(transposer) -- Deprecated
     local slot = 1
     for item in transposer.getAllStacks(c.REACTOR.SIDE) do
         if item.name == C then
@@ -111,40 +113,51 @@ end
 
 local function sendShutdownToNetwork() -- These Events allow other Programs to Receive the info that the Reactors have Shut Down
    local modem = require("modem")
-   local event = require("event")
+   
 
    modem.broadcast(0, "AN/E-SHUTDOWN")
    event.push("AN/E-SHUTDOWN")
 end
 
-local function SCRAM()
-    log.warn("SCRAM INITATED!")
-    log.warn("SHUTTING DOWN REDSTONE IOS!")
+local function SCRAM() -- Semi Deprecated => Rewrite to use reactor Specific SCRAM
+    log.scram("COMPLETE SCRAM INITATED!")
+    log.scram("SHUTTING DOWN REDSTONE IOS!")
     shutDownRedstoneIOs()
 
-    log.warn("REMOVING FUEL RODS!")
+    log.scram("REMOVING FUEL RODS!")
     for a, n in component.list("transposer", true) do
-        log.info("Removing Fuel Rods for Reactor: "..a)
+        log.scram("Removing Fuel Rods for Reactor: "..a)
         removeAllFuelRods(component.proxy(a))
 
     end
 
-    log.warn("REMOVING COOLANT!")
+    log.scram("REMOVING COOLANT!")
     for a, n in component.list("transposer", true) do
-        log.info("Removing Coolant for Reactor: "..a)
+        log.scram("Removing Coolant for Reactor: "..a)
         removeAllCoolant(component.proxy(a))
 
     end
 
-    log.warn("SENDING SHUTDOWN SIGNAL TO NETWORK")
+    log.scram("SENDING SHUTDOWN SIGNAL TO NETWORK")
     sendShutdownToNetwork()
 
-    log.warn("SCRAM COMPLETED. RESTART COMPUTER TO REINITIALIZE!")
+    log.scram("SCRAM COMPLETED. RESTART COMPUTER TO REINITIALIZE!")
+end
+
+local function SCRAM_REACTOR(address) -- Deprecated
+    local reactor = reactors[address]
+
+    log.warn("SCRAMMING REACTOR "..address)
+    reactor.redstone_io.setOutput({ 0, 0, 0, 0, 0, 0 })
+    removeAllFuelRods(reactor.reactor_chamber)
+    removeAllCoolant(reactor.transposer)
+
+    event.push("AN/REACTOR/SHUDOWN", reactor.reactor_chamber)
 end
 
 ------------------------------------------------------------------------
 -----LOAD / STARTUP
-local function loadReactor(adapter, transposer, redstone_io, override)
+local function loadReactor(adapter, transposer, redstone_io, override) -- Rewrite for new OOP Reactor
     local reactor = {
         reactor_chamber = component.proxy(adapter),
         transposer = component.proxy(transposer),
@@ -162,12 +175,12 @@ local function loadReactor(adapter, transposer, redstone_io, override)
     return reactor.data
 end
 
-local function loadUnknownReactor(adapter, transposer, redstone_io)
+local function loadUnknownReactor(adapter, transposer, redstone_io) -- Rewrite for new OOP Reactors
     local data = loadReactor(adapter, transposer, redstone_io)
     db:addObject(data, adapter)
 end
 
-local function loadReactors()
+local function loadReactors() -- Rewrite for new OOP Reactors
     for a, n in component.list("reactor_chamber", true) do
         log.info("Reactor Chamber Found: " .. a)
         if db:objectExists(a) then
@@ -199,7 +212,7 @@ local function loadReactors()
     end
 end
 
-local function resolveUnknownReactors()
+local function resolveUnknownReactors() -- Rewrite for new OOP Reactors
     for k, v in pairs(unknown_reactors) do
         term.clear()
 
@@ -229,24 +242,9 @@ local function getRedstoneIOs()
     end
 end
 
-local function tick_reactor(reactor)
-
-    if reactor.redstone_io.getOutput(c.REDSTONEIO.SIDE) > 0 then
-        log.info("Reactor "..reactor.reactor_chamber.address.." is active")
-        -- Check Heat
-        -- Check Coolant Status
-        -- Check Fuel Rod Status
-    else
-        -- Check if can Start up again
-    end
-end
-
-local function tick_all()
-    for k,v in pairs(reactors) do
-        if v.override then goto next end
-        tick_reactor(v)
-
-        ::next::
+local function tick_all() -- Rewritten / Update Logging
+    for address, reactor in pairs(reactors) do
+        reactor:tick()
     end
 
     log.info("Ticked Reactors")
@@ -262,17 +260,19 @@ local function setup()
 
     config = configdb:getById(c.CONFIG.ID)
 
+    
+    R = t_helper.multiSelect("DEFAULT FUEL ROD", c.ROD, config.DEFAULT_ROD_NAME, config.DEFAULT_ROD)
+    C = t_helper.multiSelect("DEFAULT COOLANT", c.COOLANT, config.DEFAULT_COOLANT_NAME, config.DEFAULT_COOLANT)
+
+    resetLayout()
+
     getTransposers()
     getRedstoneIOs()
     loadReactors()
 
     resolveUnknownReactors()
 
-    R = t_helper.multiSelect("DEFAULT FUEL ROD", c.ROD, config.DEFAULT_ROD_NAME, config.DEFAULT_ROD)
-    C = t_helper.multiSelect("DEFAULT COOLANT", c.COOLANT, config.DEFAULT_COOLANT_NAME, config.DEFAULT_COOLANT)
-
-    resetLayout()
-
+    -- Rewrite for OOP Reactors
     for address, reactor in pairs(reactors) do
         local inv = reactor.transposer.getAllStacks(c.REACTOR.SIDE)
 
@@ -285,7 +285,10 @@ local function setup()
                 successfull_finish = false
                 log.verbose("Slot Mismatch!")
                 log.verbose("Should Be: " .. layout[slot])
-                log.verbose("Is: ", item.name)
+                if item.name == nil then
+                    item.name = "Empty"
+                end
+                log.verbose("Is: ".. item.name)
 
                 if layout[slot] == C then
                     changeCoolantForSlot(slot, address)
