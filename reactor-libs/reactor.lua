@@ -51,22 +51,60 @@ function Reactor:new(data)
     return instance
 end
 
+function Reactor:setup()
+    local inventory = self.transposer.getAllStacks(c.REACTOR.SIDE)
+    local reactor_layout = layout.getReactorLayout(c.COOLANT[self.coolant], c.ROD[self.rod])
+    ::setupReactor::
+    local successfull_finish = true
+    local slot = 1
+
+    for item in inventory do
+        if item.name ~= reactor_layout[slot] then
+            successfull_finish = false
+            log.verbose("Slot missmatch at Reactor ".. self:getID())
+            log.verbose("Should be: "..reactor_layout[slot])
+            
+            if not item.name then
+                item.name = "Empty"
+            end
+            log.verbose("Is: ".. item.name)
+
+            if layout.getTypeForSlot(slot) == c.WORD.COOLANT then
+                self:changeCoolantForSlot(slot)
+            else
+                self:changeFuelRodInSlot(slot)
+            end
+
+            log.split()
+        end
+        slot = slot + 1
+    end
+    if not successfull_finish then
+        goto setupReactor
+    end
+
+    log.info("Setup for Reactor ".. self:getID() .. " done.")
+
+end
+
 function Reactor:getData() -- Used to get Data to load into Database
     local data = self.data
     data.coolant = self.coolant
     data.rod = self.rod
     data.override = self.override
     data.override_reason = self.override_reason
+
+    return data
 end
 
 function Reactor:getCoolantSlot()
     self.coolant_slot = self.coolant_slot + 1
 
     if self.coolant_slot > c.INTERFACE.COOLANT.RANGE then
-        self.coolant.slot = 1
+        self.coolant_slot = 1
     end
 
-    return self.coolant.slot + c.INTERFACE.COOLANT.OFFSET
+    return self.coolant_slot + c.INTERFACE.COOLANT.OFFSET
 end
 
 function Reactor:changeCoolantInSlot(slot)
