@@ -2,6 +2,7 @@ local log = require("reactor-libs.log")
 local c = require("reactor-libs.reactor_conf")
 local component = require("component")
 local lsc = require("reactor-libs.lsc-manager")
+local layout = require("reactor-libs.reactor-layout")
 
 local Reactor = {
     reactor_chamber = nil,  --PROXY
@@ -68,7 +69,7 @@ function Reactor:changeCoolantInSlot(slot)
     if not slot then
         log.vWarn("No Slot defined. Skipping Next Cycle")
         self:skipCycle()
-        return
+        return 0
     end
 
     local counter = 0
@@ -84,7 +85,7 @@ function Reactor:changeCoolantInSlot(slot)
             log.error("Deactivating Reactor ".. self:getID() .. " for next Cycle")
             
             self:skipCycle()
-            return
+            return 0
         end
 
         log.warn("No Coolant found in Interface Slot ".. if_slot.. ". Try " .. counter)
@@ -101,6 +102,30 @@ function Reactor:changeCoolantInSlot(slot)
 end
 
 function Reactor:changeFuelRodInSlot(slot)
+
+    if not slot then
+        log.vWarn("No Slot defined. Not Changing Fuel Rod")
+        return 0
+    end
+
+    local transposer = self.transposer
+
+    local reactorItem = transposer.getStackInSlot(c.REACTOR.SIDE, slot)
+    
+    if reactorItem ~= nil then
+        transposer.transferItem(c.REACTOR.SIDE, c.INTERFACE.SIDE, 1, slot, 9)
+    end
+
+    local interfaceItem = transposer.getStackInSlot(c.INTERFACE.SIDE, 1)
+    
+    if not interfaceItem then
+        log.error("Interface of Reactor "..self:getID().." has run out of Fuel Rods, skipping next Cycle")
+        self:skipCycle()
+        return 0
+    end
+
+    transposer.transferItem(c.INTERFACE.SIDE, c.REACTOR.SIDE, 1, 1, slot)
+
 end
 
 function Reactor:tick()
@@ -141,7 +166,7 @@ function Reactor:canBeActive()
     return (self:isHeatThresholdGood() + self:isCoolantGood() + self:areRodsGood()) == 3
 end
 
-function Reactor:isHeatThresholdGood()
+function Reactor:isHeatThresholdGood() -- Non Triggering
     local currentHeat = self.reactor_chamber.getHeat()
     if c.ROD[self.rod] == c.ROD.MOX then
         if(currentHeat >= c.REACTOR.HEAT.MAX*c.REACTOR.HEAT.THRESHOLD_MOX) then
@@ -156,12 +181,61 @@ function Reactor:isHeatThresholdGood()
     return true
 end
 
-function Reactor:isCoolantGood()
+function Reactor:isCoolantGood() -- Non Triggering
+    local badCoolant = {}
 
+    for slot in layout.getCoolantSlots() do
+        local item = self.reactor_chamber.getStackInSlot(c.REACTOR.SIDE, slot)
+
+        if not item then
+            log.warn("Reactor ".. self:getID() .. " missing Coolant in Slot ".. slot)
+            table.insert(badCoolant, slot)
+            goto nextCoolant
+        end
+
+        local currentHeat = item.damage
+        local maxHeat = item.maxDamage
+        local itemName = item.name
+
+        if currentHeat > maxHeat * c.COOLANT_ITEM.HEAT_THRESHOLD then
+            log.info("Changing Coolant for Reactor".. self:getID())
+            table.insert(badCoolant, slot)
+        elseif itemName ~= c.COOLANT[self.coolant] then
+            log.warn("Unexpected Coolant for Reactor")
+            table.insert(badCoolant, slot)
+        end
+
+        ::nextCoolant::
+    end
+
+    return #badCoolant>0, badCoolant
 end
 
-function Reactor:areRodsGood()
+function Reactor:areRodsGood() -- Non Triggering
+    local badRod = {}
 
+    for slot in layout.getRodSlots() do
+        local item = self.reactor_chamber.getStackInSlot(c.REACTOR.SIDE, slot)
+
+        if not item then
+            log.warn("Reactor ".. self:getID() .. " missing Fuel Rod in Slot ".. slot)
+            table.insert(badRod, slot)
+            goto nextRod
+        end
+        local itemName = item.name
+
+        if itemName == c.DEPLETED_ROD[self.rod] then
+            log.info("Changing Fuel Rod for Reactor".. self:getID())
+            table.insert(badRod, slot)
+        elseif itemName ~= c.ROD[self.rod] then
+            log.warn("Unexpected Fuel Rod for Reactor")
+            table.insert(badRod, slot)
+        end
+
+        ::nextRod::
+    end
+
+    return #badRod>0, badRod
 end
 
 function Reactor:checkHeat()
@@ -174,12 +248,25 @@ function Reactor:checkHeat()
     self:SCRAM("HEAT THRESHOLD OVERSTEPPED")
 end
 
-function Reactor:checkCoolant() -- Check if any Hot Coolant is present or not in slot and Replace or shut down if not possible
+function Reactor:checkCoolant() -- Maybe Copy isCoolantGood but make it swap while the check is running if current way is not fast enough
+    local coolantGood, badCoolant = self:isCoolantGood()
+
+    if not coolantGood then
+        for slot in badCoolant do
+            self:changeCoolantInSlot(slot)
+        end
+    end
 end
 
 function Reactor:checkRods() -- Check if any Rods are depleted or not present and replace or shutdown if not possible
-end
+    local rodsGood, badRods = self:areRodsGood()
 
+    if not rodsGood then
+        for slot in badRods do
+            self:changeFuelRodInSlot(slot)
+        end
+    end
+end
 
 function Reactor:skipCycle()
     self:deactivate()

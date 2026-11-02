@@ -39,6 +39,10 @@ return {
         LARGE_SP = gt.."1080k_Space_Coolantcell"
     },
 
+    COOLANT_ITEM = {
+        HEAT_THRESHOLD = 0.85
+    },
+
     ROD = {
         GLOWSTONE = gt.."rodGlowstone",
         URANIUM = gt.."rodUranium4",
@@ -48,8 +52,22 @@ return {
         HD_PLUTONIUM = gt.."rodHighDensityPlutonium4"
     },
 
+    DEPLETED_ROD = {
+        GLOWSTONE = gt.."rodSunnarium",
+        URANIUM = gt.."rodDepletedUranium4",
+        MOX = gt.."rodDepletedMOX4",
+        HD_URANIUM = gt.."rodDepletedHighDensityUranium4",
+        EXCITED_URANIUM = gt.."rodDepletedExcitedUranium4",
+        HD_PLUTONIUM = gt.."rodDepletedHighDensityPlutonium4"
+    },
+
     DEFAULT = {
         COOLANT = "HELIUM",
         ROD = "GLOWSTONE"
+    },
+
+    WORD = {
+        COOLANT = "COOLANT",
+        ROD = "ROD"
     }
 }
