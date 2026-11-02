@@ -26,6 +26,11 @@ local Reactor = {
     }
 }
 
+local function throw(message)
+    log.error(message)
+    error(message)
+end
+
 function Reactor:new(data)
     local instance = setmetatable({}, self)
 
