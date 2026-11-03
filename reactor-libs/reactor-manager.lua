@@ -13,13 +13,6 @@ local gpu = component.gpu
 local db = DB:new()
 local configdb = DB:new()
 
-
---- Widget Data
-
-local left = 3
-local top = 13
-local width = 54
-
 ------------------------------------------------------------------------
 -----SAFETY
 
@@ -69,7 +62,6 @@ end
 ------------------------------------------------------------------------
 -----LOAD / STARTUP
 
-
 local function loadReactor(data) -- Rewrite Done
     local reactor = REACTOR:new(data)
 
@@ -102,7 +94,7 @@ local function loadUnknownReactor(data) -- Rewrite Done
     end
     data.coolant = interface_coolant
     data.rod = interface_rod
-    
+
     local reactor = loadReactor(data)
 
     db:addObject(reactor:getData(), reactor:getID())
@@ -225,10 +217,8 @@ local function setup()
     log.info("Starting Reactor Setup.")
     log.draw()
 
-
     db:setPath("reactors")
     configdb:setPath("config")
-
 
     getTransposers()
     getRedstoneIOs()
