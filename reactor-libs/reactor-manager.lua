@@ -70,11 +70,9 @@ local function loadReactor(data) -- Rewrite Done
 end
 
 local function loadUnknownReactor(data) -- Rewrite Done
-    local interface_coolant = component.proxy(data.transposer_a).getStackInSlot(c.INTERFACE.SIDE,2)
-    local interface_rod = component.proxy(data.transposer_a).getStackInSlot(c.INTERFACE.SIDE,1)
-    log.error("TEST")
-    log.error(interface_coolant)
-    log.error(interface_rod)
+    local tranpsoser=component.proxy(data.transposer_a)
+    local interface_coolant = tranpsoser.getStackInSlot(c.INTERFACE.SIDE,2)
+    local interface_rod = tranpsoser.getStackInSlot(c.INTERFACE.SIDE,1)
     if interface_rod then
         for k, v in pairs(c.ROD) do
             if v == interface_rod.name then
