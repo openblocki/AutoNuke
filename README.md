@@ -14,20 +14,20 @@ Interface can be filled With any Supportet Coolant or Rod,
 <img width="2560" height="1057" alt="2026-11-03_15 17 13" src="https://github.com/user-attachments/assets/8794efc8-949a-446a-a678-f6ac74b1f57a" />
 
 Adapter can be Placed on any of the 4 side Chambers</br>
-!NOT IN THE CORNERS!
+!NOT IN THE CORNERS!</br>
 
-Each Adapter, Transpoder and Redstone IO can only touch one Reactor or else it wont work
+Each Adapter, Transpoder and Redstone IO can only touch one Reactor or else it wont work</br>
 
-CURRENTLY SUPPORTET COOLANT:
-Helium
-NaK
-540k SP Coolant
-1080k SP Coolant
+CURRENTLY SUPPORTET COOLANT:</br>
+Helium</br>
+NaK</br>
+540k SP Coolant</br>
+1080k SP Coolant</br>
 
-Currently Supportet Fuel:
-Glowstone (Only meant for Testing)
-Uranium
-MoX (Including Heat Capacity - System can't heat up by itself yet)
-High Density Uranium
-Excited Uranium
-High Density Plutonium
+Currently Supportet Fuel:</br>
+Glowstone (Only meant for Testing)</br>
+Uranium</br>
+MoX (Including Heat Capacity - System can't heat up by itself yet)</br>
+High Density Uranium</br>
+Excited Uranium</br>
+High Density Plutonium</br>
