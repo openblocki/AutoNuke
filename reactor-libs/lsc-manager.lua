@@ -42,14 +42,14 @@ local function drawLSCStatus()
 
     gpu.setBackground(0x6a7a94)
     gpu.setForeground(0x0e6900)
-    gpu.fill(3, 2, 23, 5, " ")
-    gpu.set(3, 2, "[Max Power] " .. lsc.MAXPOWER)
-    gpu.set(3, 4, "[Current Power] " .. lsc.POWER)
-    gpu.set(3, 6, "[AVG Power] " .. lsc.AVGPOWER())
+    gpu.fill(3, 2, 33, 5, " ")
+    gpu.set(3, 2, "[Max Power] " .. lsc.MAXPOWER .. " EU")
+    gpu.set(3, 4, "[Current Power] " .. lsc.POWER.. " EU")
+    gpu.set(3, 6, "[AVG Power] " .. lsc.AVGPOWER().. " EU/t")
 end
 
 local function setupWidget()
-    gpu.fill(1, 1, 27, 7, " ")
+    gpu.fill(1, 1, 37, 7, " ")
     gpu.set(1, 1, "LSC")
     drawLSCStatus()
 end
