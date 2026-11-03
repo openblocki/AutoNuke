@@ -45,7 +45,7 @@ end
 
 local function userClick(_,_, x, y,_)
     if x>90 and x<150 and y>5 and y<20 then
-        log.info("User sent for ShutOff")
+        log.info("User sent for ShutOff - Shutton down at the end of Cycle")
         log.draw()
         shutOff()
         return false
@@ -127,7 +127,12 @@ local function main()
         print(err)
     end
     m_reactor.shutDownRedstoneIOs()
+    log.error("EOM")
 end
 
 term.clear()
 main()
+
+log.error("EOF")
+gpu.setBackground(0x000000)
+term.clear()
