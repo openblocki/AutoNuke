@@ -18,6 +18,14 @@ Adapter can be Placed on any of the 4 side Chambers</br>
 
 Each Adapter, Transpoder and Redstone IO can only touch one Reactor or else it wont work</br>
 
+I Recommend Installing after Building the Reactors as they only get Registered at the Start of the Program.</br>
+Installation Instructions: </br>
+1. run "pastebin get 7VLFzeqt inst.lua"  </br>
+2. run "inst" </br>
+3. run "AutoNuke" </br>
+
+Setup UI looks a bit bad Right now, but it should be understandable
+
 CURRENTLY SUPPORTET COOLANT:</br>
 Helium</br>
 NaK</br>
