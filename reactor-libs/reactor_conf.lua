@@ -54,16 +54,16 @@ return {
 
     DEPLETED_ROD = {
         GLOWSTONE = gt.."rodSunnarium",
-        URANIUM = gt.."rodDepletedUranium4",
-        MOX = gt.."rodDepletedMOX4",
-        HD_URANIUM = gt.."rodDepletedHighDensityUranium4",
-        EXCITED_URANIUM = gt.."rodDepletedExcitedUranium4",
-        HD_PLUTONIUM = gt.."rodDepletedHighDensityPlutonium4"
+        URANIUM = gt.."depletedRodUranium4",
+        MOX = gt.."depletedRodMOX4",
+        HD_URANIUM = gt.."depletedRodHighDensityUranium4",
+        EXCITED_URANIUM = gt.."depletedRodExcitedUranium4",
+        HD_PLUTONIUM = gt.."depletedRodHighDensityPlutonium4"
     },
 
     DEFAULT = {
         COOLANT = "HELIUM",
-        ROD = "GLOWSTONE"
+        ROD = "URANIUM"
     },
 
     WORD = {
