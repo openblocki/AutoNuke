@@ -5,9 +5,9 @@ local lsc = require("reactor-libs.lsc-manager")
 local layout = require("reactor-libs.reactor-layout")
 
 local Reactor = {
-    reactor_chamber = nil,  --PROXY
-    transposer = nil,       --PROXY
-    redstone_io = nil,      --PROXY
+    reactor_chamber = nil, --PROXY
+    transposer = nil,      --PROXY
+    redstone_io = nil,     --PROXY
 
     coolant = nil,
     rod = nil,
@@ -19,10 +19,10 @@ local Reactor = {
 
     skip_cycle = false,
 
-    status ="No Status Set",
+    status = "No Status Set",
 
     data = {
-        adapter_a = nil, -- Acts as ID of Reactor 
+        adapter_a = nil, -- Acts as ID of Reactor
         transposer_a = nil,
         redstone_io_a = nil
     }
@@ -40,9 +40,12 @@ function Reactor:new(data)
     self.coolant = data.coolant or c.DEFAULT.COOLANT
     self.rod = data.rod or c.DEFAULT.ROD
 
-    self.reactor_chamber = component.proxy(data.adapter_a) or throw("PROXY FOR REACTOR ADAPTER "..data.adapter_a.." NOT FOUND!")
-    self.transposer = component.proxy(data.transposer_a) or throw("PROXY FOR REACTOR TRANSPOSER "..data.transposer_a.." NOT FOUND!")
-    self.redstone_io = component.proxy(data.redstone_io_a) or throw("PROXY FOR REACTOR REDSTONE_IO "..data.redstone_io_a.." NOT FOUND!")
+    self.reactor_chamber = component.proxy(data.adapter_a) or
+    throw("PROXY FOR REACTOR ADAPTER " .. data.adapter_a .. " NOT FOUND!")
+    self.transposer = component.proxy(data.transposer_a) or
+    throw("PROXY FOR REACTOR TRANSPOSER " .. data.transposer_a .. " NOT FOUND!")
+    self.redstone_io = component.proxy(data.redstone_io_a) or
+    throw("PROXY FOR REACTOR REDSTONE_IO " .. data.redstone_io_a .. " NOT FOUND!")
 
     self.override = data.override or false
     self.override_reason = data.override_reason or "No Reason Specified"
@@ -64,13 +67,13 @@ function Reactor:setup()
     for item in inventory do
         if item.name ~= reactor_layout[slot] then
             successfull_finish = false
-            log.verbose("Slot missmatch at Reactor ".. self:getShortID())
-            log.verbose("Should be: "..reactor_layout[slot])
-            
+            log.verbose("Slot missmatch at Reactor " .. self:getShortID())
+            log.verbose("Should be: " .. reactor_layout[slot])
+
             if not item.name then
                 item.name = "Empty"
             end
-            log.verbose("Is: ".. item.name)
+            log.verbose("Is: " .. item.name)
 
             if layout.getTypeForSlot(slot) == c.WORD.COOLANT then
                 self:changeCoolantInSlot(slot)
@@ -84,8 +87,7 @@ function Reactor:setup()
         goto setupReactor
     end
 
-    log.info("Setup for Reactor ".. self:getShortID() .. " done.")
-
+    log.info("Setup for Reactor " .. self:getShortID() .. " done.")
 end
 
 function Reactor:getData() -- Used to get Data to load into Database
@@ -109,7 +111,6 @@ function Reactor:getCoolantSlot()
 end
 
 function Reactor:changeCoolantInSlot(slot)
-
     if not slot then
         log.vWarn("No Slot defined. Skipping Next Cycle")
         self:skipCycle("No Coolant Slot Defined")
@@ -120,91 +121,88 @@ function Reactor:changeCoolantInSlot(slot)
 
     ::retryCoolant::
     local if_slot = self:getCoolantSlot()
-    log.info("Changing Coolant for Reactor "..self:getShortID())
+    log.info("Changing Coolant for Reactor " .. self:getShortID())
 
     local interfaceItem = self.transposer.getStackInSlot(c.INTERFACE.SIDE, if_slot)
     if not interfaceItem then
         if counter > 5 then
-            log.error("Could not swap Coolant for Reactor ".. self:getShortID().. " after ".. counter .. " tries.")
-            log.error("Deactivating Reactor ".. self:getShortID() .. " for next Cycle")
-            
+            log.error("Could not swap Coolant for Reactor " .. self:getShortID() .. " after " .. counter .. " tries.")
+            log.error("Deactivating Reactor " .. self:getShortID() .. " for next Cycle")
+
             self:skipCycle("No Coolant found in Interface")
             return 0
         end
 
-        log.warn("No Coolant found in Interface Slot ".. if_slot.. ". Try " .. counter)
+        log.warn("No Coolant found in Interface Slot " .. if_slot .. ". Try " .. counter)
         log.warn("Trying next slot")
         counter = counter + 1
         goto retryCoolant
-
     elseif interfaceItem.name ~= c.COOLANT[self.coolant] then
-        log.error("Interface Provided wrong Coolant for Reactor ".. self:getShortID())
-        self:override("INTERFACE PROVIDED WRONG COOLANT: ".. interfaceItem.name)
+        log.error("Interface Provided wrong Coolant for Reactor " .. self:getShortID())
+        self:override("INTERFACE PROVIDED WRONG COOLANT: " .. interfaceItem.name)
     end
 
     self.transposer.swap(c.INTERFACE.SIDE, c.REACTOR.SIDE, if_slot, slot)
 end
 
 function Reactor:changeFuelRodInSlot(slot)
-
     if not slot then
         log.vWarn("No Slot defined. Not Changing Fuel Rod")
         return 0
     end
 
-        log.info("Changing Fuel Rod for Reactor "..self:getShortID())
+    log.info("Changing Fuel Rod for Reactor " .. self:getShortID())
 
 
     local transposer = self.transposer
 
     local reactorItem = transposer.getStackInSlot(c.REACTOR.SIDE, slot)
-    
+
     if reactorItem ~= nil then
         transposer.transferItem(c.REACTOR.SIDE, c.INTERFACE.SIDE, 1, slot, 9)
     end
 
     local interfaceItem = transposer.getStackInSlot(c.INTERFACE.SIDE, 1)
-    
+
     if not interfaceItem then
-        log.error("Interface of Reactor "..self:getShortID().." has run out of Fuel Rods, skipping next Cycle")
+        log.error("Interface of Reactor " .. self:getShortID() .. " has run out of Fuel Rods, skipping next Cycle")
         self:skipCycle("No Fuel Rods in Interface")
         return 0
     end
 
     transposer.transferItem(c.INTERFACE.SIDE, c.REACTOR.SIDE, 1, 1, slot)
-
 end
 
 function Reactor:tick()
-    if(self.override) then return end
-    if(self.skip_cycle) then
+    if (self.override) then return end
+    if (self.skip_cycle) then
         self.skip_cycle = false
         return
     end
-    self:checkHeat() -- 0.05
+    self:checkHeat()                               -- 0.05
 
-    local coolant, rods = self:getContents() -- 0.049
+    local coolant, rods = self:getContents()       -- 0.049
 
-    self:checkCoolant(coolant) -- 0.0
-    self:checkRods(rods) -- 0.0 
-    local isActive = self:isActive() -- 0.0
-    local canBeActive = self:canBeActive() --0.1
-    local needsPower = lsc.needsPower() -- 0.0
+    self:checkCoolant(coolant)                     -- 0.0
+    self:checkRods(rods)                           -- 0.0
+    local isActive = self:isActive()               -- 0.0
+    local canBeActive = self:canBeActive()         --0.1
+    local needsPower = lsc.needsPower()            -- 0.0
 
     if isActive == canBeActive and needsPower then -- 0.0
         self.status = "Running Fine"
         return
     elseif isActive and not canBeActive then
         self.status = "Turned off for Safety"
-        log.info("Reactor ".. self:getShortID() .. " is active but should be off. Turning off")
+        log.info("Reactor " .. self:getShortID() .. " is active but should be off. Turning off")
         self:deactivate()
     elseif not isActive and canBeActive and needsPower then
         self.status = "Turning on"
-        log.info("Turning on Reactor ".. self:getShortID() .. ".")
+        log.info("Turning on Reactor " .. self:getShortID() .. ".")
         self:activate()
     elseif isActive and canBeActive and not needsPower then
         self.status = "Idling"
-        log.info("Deactivating Reactor "..self:getShortID().." due to high Power Levels")
+        log.info("Deactivating Reactor " .. self:getShortID() .. " due to high Power Levels")
         self:deactivate()
     elseif not isActive and canBeActive and not needsPower then
         return
@@ -224,9 +222,9 @@ function Reactor:getContents()
 
     for k, v in pairs(lay) do
         if v == c.WORD.COOLANT then
-            table.insert(coolant, {item = items[k], slot = k })
+            table.insert(coolant, { item = items[k], slot = k })
         else
-            table.insert(rods, {item = items[k], slot = k })
+            table.insert(rods, { item = items[k], slot = k })
         end
     end
 
@@ -237,11 +235,11 @@ function Reactor:isActive()
     return self.redstone_io.getOutput(c.REDSTONEIO.SIDE) > 0
 end
 
-function Reactor:canBeActive() -- Make Parallel?
+function Reactor:canBeActive()               -- Make Parallel?
     local cool, rod = self:getContents()
-    local heat = self:isHeatThresholdGood() -- 0.05
+    local heat = self:isHeatThresholdGood()  -- 0.05
     local coolant = self:isCoolantGood(cool) -- 0.7
-    local rods = self:areRodsGood(rod) -- 2.0 (Its Acceptable if Rods are Depleted for a single Cycle)
+    local rods = self:areRodsGood(rod)       -- 2.0 (Its Acceptable if Rods are Depleted for a single Cycle)
 
     local canBeActive = heat and coolant and rods
     return canBeActive
@@ -250,11 +248,11 @@ end
 function Reactor:isHeatThresholdGood() -- Non Triggering
     local currentHeat = self.reactor_chamber.getHeat()
     if c.ROD[self.rod] == c.ROD.MOX then
-        if(currentHeat >= c.REACTOR.HEAT.MAX*c.REACTOR.HEAT.THRESHOLD_MOX) then
+        if (currentHeat >= c.REACTOR.HEAT.MAX * c.REACTOR.HEAT.THRESHOLD_MOX) then
             return false
         end
     else
-        if currentHeat >= c.REACTOR.HEAT.MAX*c.REACTOR.HEAT.THRESHOLD then
+        if currentHeat >= c.REACTOR.HEAT.MAX * c.REACTOR.HEAT.THRESHOLD then
             return false
         end
     end
@@ -266,9 +264,8 @@ function Reactor:isCoolantGood(coolant) -- Non Triggering
     local badCoolant = {}
 
     for _, cool in pairs(coolant) do
-
         if not cool.item then
-            log.warn("Reactor ".. self:getShortID() .. " missing Coolant in Slot ".. cool.slot)
+            log.warn("Reactor " .. self:getShortID() .. " missing Coolant in Slot " .. cool.slot)
             table.insert(badCoolant, cool.slot)
             goto nextCoolant
         end
@@ -280,14 +277,14 @@ function Reactor:isCoolantGood(coolant) -- Non Triggering
         if currentHeat > maxHeat * c.COOLANT_ITEM.HEAT_THRESHOLD then
             table.insert(badCoolant, cool.slot)
         elseif itemName ~= c.COOLANT[self.coolant] then
-            log.warn("Unexpected Coolant for Reactor "..self:getShortID())
+            log.warn("Unexpected Coolant for Reactor " .. self:getShortID())
             table.insert(badCoolant, cool.slot)
         end
 
         ::nextCoolant::
     end
 
-    return #badCoolant==0, badCoolant
+    return #badCoolant == 0, badCoolant
 end
 
 function Reactor:areRodsGood(rod)
@@ -295,7 +292,7 @@ function Reactor:areRodsGood(rod)
 
     for _, ro in pairs(rod) do
         if not ro.item then
-            log.warn("Reactor ".. self:getShortID() .. " missing Fuel Rod in Slot ".. ro.slot)
+            log.warn("Reactor " .. self:getShortID() .. " missing Fuel Rod in Slot " .. ro.slot)
             table.insert(badRod, ro.slot)
             goto nextRod
         end
@@ -304,14 +301,14 @@ function Reactor:areRodsGood(rod)
         if itemName == c.DEPLETED_ROD[self.rod] then
             table.insert(badRod, ro.slot)
         elseif itemName ~= c.ROD[self.rod] then
-            log.warn("Unexpected Fuel Rod for Reactor ".. self:getShortID())
+            log.warn("Unexpected Fuel Rod for Reactor " .. self:getShortID())
             table.insert(badRod, ro.slot)
         end
 
         ::nextRod::
     end
 
-    return #badRod==0, badRod
+    return #badRod == 0, badRod
 end
 
 function Reactor:checkHeat()
@@ -319,8 +316,9 @@ function Reactor:checkHeat()
         return
     end
 
-    log.error("Reactor "..self:getShortID().. " went over the Heat threshold. ")
-    log.error(self.reactor_chamber.getHeat().."/"..c.REACTOR.HEAT.MAX.. " => " .. c.REACTOR.HEAT.MAX/self.reactor_chamber.getHeat())
+    log.error("Reactor " .. self:getShortID() .. " went over the Heat threshold. ")
+    log.error(self.reactor_chamber.getHeat() ..
+    "/" .. c.REACTOR.HEAT.MAX .. " => " .. c.REACTOR.HEAT.MAX / self.reactor_chamber.getHeat())
     self:SCRAM("HEAT THRESHOLD OVERSTEPPED")
 end
 
@@ -328,7 +326,7 @@ function Reactor:checkCoolant(coolant)
     local coolantGood, badCoolant = self:isCoolantGood(coolant)
     if not coolantGood then
         for _, slot in pairs(badCoolant) do
-            log.info("Changing Coolant for Reactor ".. self:getShortID())
+            log.info("Changing Coolant for Reactor " .. self:getShortID())
             self:changeCoolantInSlot(slot)
         end
     end
@@ -339,14 +337,14 @@ function Reactor:checkRods(rod)
     -- Maybe Do on Seperate Thread to since this can be non Blocking
     if not rodsGood then
         for _, slot in pairs(badRods) do
-            log.info("Changing Rod for Reactor ".. self:getShortID())
+            log.info("Changing Rod for Reactor " .. self:getShortID())
             self:changeFuelRodInSlot(slot)
         end
     end
 end
 
 function Reactor:skipCycle(reason)
-    self.status = "Skipping Cycle: "..(reason or "No Reason")
+    self.status = "Skipping Cycle: " .. (reason or "No Reason")
     self:deactivate()
     self.skip_cycle = true
 end
@@ -413,8 +411,8 @@ end
 
 -- @param reason <string?>= "No Reason Set"
 function Reactor:activateOverride(reason)
-    log.warn("Overriding Reactor ".. self:getShortID() .. ".")
-    log.warn("Override Reason: ".. (reason or "No Reason Set"))
+    log.warn("Overriding Reactor " .. self:getShortID() .. ".")
+    log.warn("Override Reason: " .. (reason or "No Reason Set"))
     log.warn("Reactor will not be managed by AutoNuke until ReActivation")
     log.warn("Defaulting to OFF State")
     log.draw()
@@ -425,7 +423,7 @@ function Reactor:activateOverride(reason)
 end
 
 function Reactor:deactivateOverride()
-    log.warn("ReActivating Reactor ".. self:getShortID() .. ".")
+    log.warn("ReActivating Reactor " .. self:getShortID() .. ".")
     log.warn("Normal behavior will continue in next Reactor Tick")
     log.warn("Defaulting to OFF State")
     log.draw()
@@ -450,17 +448,17 @@ function Reactor:getOutput()
 end
 
 function Reactor:getHeatPercentage()
-    return math.floor((self.reactor_chamber.getHeat()/self.reactor_chamber.getMaxHeat())*100)
+    return math.floor((self.reactor_chamber.getHeat() / self.reactor_chamber.getMaxHeat()) * 100)
 end
 
 function Reactor:getStatus()
-    if self.override then return "Override: ".. self.override_reason end
+    if self.override then return "Override: " .. self.override_reason end
     return self.status
 end
 
 function Reactor:getIsReactorOn()
     if self.override then return "O" end
-    if self:isActive() then return  "☑" else return "☐" end
+    if self:isActive() then return "☑" else return "☐" end
 end
 
 function Reactor:getStatusColor()

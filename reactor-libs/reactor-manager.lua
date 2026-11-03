@@ -72,6 +72,9 @@ end
 local function loadUnknownReactor(data) -- Rewrite Done
     local interface_coolant = component.proxy(data.transposer_a).getStackInSlot(c.INTERFACE.SIDE,2)
     local interface_rod = component.proxy(data.transposer_a).getStackInSlot(c.INTERFACE.SIDE,1)
+    log.error("TEST")
+    log.error(interface_coolant)
+    log.error(interface_rod)
     if interface_rod then
         for k, v in pairs(c.ROD) do
             if v == interface_rod.name then
@@ -80,6 +83,7 @@ local function loadUnknownReactor(data) -- Rewrite Done
         end
         log.info("Auto Detected Fuel ".. interface_rod .. " for Reactor ".. data.adapter_a)
     else
+        interface_rod = term_helper.multiSelect("Fuel Rod for Reactor ".. data.adapter_a, c.ROD, "GLOWSTONE", c.ROD.GLOWSTONE)
     end
     if interface_coolant then
         for k, v in pairs(c.COOLANT) do
@@ -89,7 +93,6 @@ local function loadUnknownReactor(data) -- Rewrite Done
         end
         log.info("Auto Detected Coolant ".. interface_coolant .. " for Reactor ".. data.adapter_a)
     else
-        interface_rod = term_helper.multiSelect("Fuel Rod for Reactor ".. data.adapter_a, c.ROD, "GLOWSTONE", c.ROD.GLOWSTONE)
         interface_coolant = term_helper.multiSelect("Coolant for Reactor ".. data.adapter_a, c, "HELIUM", c.COOLANT.HELIUM)
     end
     data.coolant = interface_coolant

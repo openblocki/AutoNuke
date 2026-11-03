@@ -34,7 +34,7 @@ return {
     end,
 
     multiSelectNoDefault = function (label, options)
-                log.longSplit()
+        log.longSplit()
         log.beautify("Please Select ".. label)
 
         ::selector::
