@@ -48,7 +48,6 @@ local function downloadFile(path)
 end
 
 for _, file in ipairs(filesTD) do
-    local savePath = home .. file
 
     print("DOWNLOADING " .. file)
 
@@ -61,4 +60,15 @@ for _, file in ipairs(filesTD) do
     end
 end
 
-print("DONE")
+print("REGISTERING INTO .shrc FOR AUTORUN")
+
+local auto = io.open("/home/.shrc", "a")
+if auto then
+auto:write("/home/AutoNuke.lua")
+auto:close()
+else
+    print("COULD NOT REGISTER FOR AUTOSTART")
+    print("PLEASE RETRY")
+end
+
+print("DONE, PLEASE REBOOT")
