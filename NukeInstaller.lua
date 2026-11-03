@@ -46,6 +46,7 @@ local function downloadFile(path)
     file:write(sContent)
 
     file:close()
+    return true
 end
 
 for _, file in ipairs(filesTD) do
