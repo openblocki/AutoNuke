@@ -137,7 +137,7 @@ local function loadReactors() -- Rewrite Done
 end
 
 local function resolveUnknownReactors()
-    log.info("Resolving Unknown Reactprs")
+    log.info("Resolving Unknown Reactors")
     for _, adapter in pairs(unknown_reactors) do
         gpu.setBackground(0x000000)
         term.clear()

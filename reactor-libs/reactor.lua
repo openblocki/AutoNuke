@@ -77,8 +77,6 @@ function Reactor:setup()
             else
                 self:changeFuelRodInSlot(slot)
             end
-
-            log.split()
         end
         slot = slot + 1
     end
@@ -122,7 +120,7 @@ function Reactor:changeCoolantInSlot(slot)
 
     ::retryCoolant::
     local if_slot = self:getCoolantSlot()
-    log.info("Changing Coolant for Reactor "..self:getShortID()..": "..if_slot.. "->"..slot)
+    log.info("Changing Coolant for Reactor "..self:getShortID())
 
     local interfaceItem = self.transposer.getStackInSlot(c.INTERFACE.SIDE, if_slot)
     if not interfaceItem then
@@ -153,6 +151,9 @@ function Reactor:changeFuelRodInSlot(slot)
         log.vWarn("No Slot defined. Not Changing Fuel Rod")
         return 0
     end
+
+        log.info("Changing Fuel Rod for Reactor "..self:getShortID())
+
 
     local transposer = self.transposer
 

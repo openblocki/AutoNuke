@@ -123,17 +123,17 @@ return {
   end,
 
   split = function()
-    log({message ="------------", data = INFO })
+    log({message ="------------", data = EMPTY })
     draw()
   end,
 
   longSplit = function()
-    log({message = "---------------------------------", data = INFO})
+    log({message = "---------------------------------", data = EMPTY})
     draw()
   end,
 
   beautify = function(m)
-    log({message = "#  " .. m, data = INFO})
+    log({message = "#  " .. m, data = EMPTY})
     draw()
   end
 }
