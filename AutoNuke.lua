@@ -4,6 +4,7 @@ local log = require("reactor-libs.log")
 local component = require("component")
 local term = require("term")
 local gpu = component.gpu
+local screen = component.screen
 local event = require("event")
 
 local keepAlive = false
@@ -43,13 +44,11 @@ local function shutOff()
 end
 
 local function userClick(_,_, x, y,_)
-    log.info("User Click ".. x .. " " .. y)
-    log.draw()
     if x>90 and x<150 and y>5 and y<20 then
         log.info("User sent for ShutOff")
         log.draw()
         shutOff()
-        return true
+        return false
     end
 
     return true
@@ -60,6 +59,8 @@ local function main()
     local height = 50
 
     keepAlive = true
+
+    screen.setTouchModeInverted(true)
 
     event.listen("touch", userClick)
     event.listen("AN/CONTROLL/SHUTDOWN", shutOff)
@@ -110,6 +111,7 @@ local function main()
 
             log.namedDebug("CYCLE")
             log.draw()
+            os.sleep(0)
         end
 
 
