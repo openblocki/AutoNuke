@@ -28,10 +28,11 @@ return {
             return defaultValue
         end
 
-        log.longSplit() 
+        log.longSplit()
 
-        return options[optionKeys[userInput]]
+        return optionKeys[userInput]
     end,
+
     multiSelectNoDefault = function (label, options)
                 log.longSplit()
         log.beautify("Please Select ".. label)

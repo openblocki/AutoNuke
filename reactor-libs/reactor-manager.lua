@@ -3,6 +3,7 @@ local c = require("reactor-libs.reactor_conf")
 local t_helper = require("reactor-libs.term_helper")
 local DB = require("reactor-libs.db")
 local REACTOR = require("reactor-libs.reactor")
+local term_helper = require("reactor-libs.term_helper")
 
 local event = require("event")
 local term = require("term")
@@ -77,6 +78,31 @@ local function loadReactor(data) -- Rewrite Done
 end
 
 local function loadUnknownReactor(data) -- Rewrite Done
+    local interface_coolant = component.proxy(data.transposer_a).getStackInSlot(c.INTERFACE.SIDE,2)
+    local interface_rod = component.proxy(data.transposer_a).getStackInSlot(c.INTERFACE.SIDE,1)
+    if interface_rod then
+        for k, v in pairs(c.ROD) do
+            if v == interface_rod.name then
+                interface_rod = k
+            end
+        end
+        log.info("Auto Detected Fuel ".. interface_rod .. " for Reactor ".. data.adapter_a)
+    else
+    end
+    if interface_coolant then
+        for k, v in pairs(c.COOLANT) do
+            if v == interface_coolant.name then
+                interface_coolant = k
+            end
+        end
+        log.info("Auto Detected Coolant ".. interface_coolant .. " for Reactor ".. data.adapter_a)
+    else
+        interface_rod = term_helper.multiSelect("Fuel Rod for Reactor ".. data.adapter_a, c.ROD, "GLOWSTONE", c.ROD.GLOWSTONE)
+        interface_coolant = term_helper.multiSelect("Coolant for Reactor ".. data.adapter_a, c, "HELIUM", c.COOLANT.HELIUM)
+    end
+    data.coolant = interface_coolant
+    data.rod = interface_rod
+    
     local reactor = loadReactor(data)
 
     db:addObject(reactor:getData(), reactor:getID())
@@ -119,12 +145,13 @@ local function loadReactors() -- Rewrite Done
 end
 
 local function resolveUnknownReactors()
+    log.info("Resolving Unknown Reactprs")
     for _, adapter in pairs(unknown_reactors) do
+        gpu.setBackground(0x000000)
         term.clear()
 
         local transposer, tKey = t_helper.multiSelectNoDefault("Transposer for Reactor " .. adapter, transposers)
         local redstone_io, rKey = t_helper.multiSelectNoDefault("Redstone IO for Reactor " .. adapter, redstone_ios)
-
 
         loadUnknownReactor({
             adapter_a = adapter,
@@ -173,7 +200,7 @@ local function updateWidget()
         local statusColor = reactor:getStatusColor()
 
         gpu.setBackground(statusColor)
-        gpu.fill(3, 15+count, 66, 1, " ")
+        gpu.fill(3, 15 + count, 66, 1, " ")
         gpu.set(3, 15 + count, string.format(reactor_display_format, onOff, address, heat, output, status))
 
         count = count + 1
@@ -197,15 +224,16 @@ end
 local function setup()
     log.info("Starting Reactor Setup.")
     log.draw()
+
+
     db:setPath("reactors")
     configdb:setPath("config")
+
 
     getTransposers()
     getRedstoneIOs()
     loadReactors()
-
     resolveUnknownReactors()
-
     -- Rewrite Done
     for _, reactor in pairs(reactors) do
         reactor:setup()

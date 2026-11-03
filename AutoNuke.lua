@@ -29,9 +29,15 @@ local function setupWidgedBorders()
 end
 
 local function main()
+    local width = 160
+    local height = 50
+    gpu.setBackground(0x000000)
+    gpu.setResolution(width, height)
+
     log.info("INITIALIZING REACTOR SEQUENCE")
 
     log.info("SETTING UP REACTORS")
+
     local reactor_setup_result = m_reactor.setup()
 
     if not reactor_setup_result then
@@ -42,10 +48,9 @@ local function main()
     end
     log.info("REACTORS SET UP")
 
-
     log.info("SETTING UP LSC")
     local lsc_setup_result = m_lsc.setup()
-
+    
     if not lsc_setup_result then
         log.error("LSC SETUP NOT SUCCESSFULL. SHUTTING DOWN!")
         m_reactor.shutDownRedstoneIOs()
@@ -54,27 +59,26 @@ local function main()
     end
     log.info("LSC SET UP")
 
+    --setupWidgedBorders()
+    os.sleep(10)
+
+    gpu.setForeground(0x0e6900)
+    gpu.setBackground(0x6a7a94)
+
+
     keepAlive = true
 
+    setupWidgedBorders()
+
     local function protected_main()
-        local width = 160
-        local height = 50
-        gpu.setBackground(0x000000)
-        gpu.setResolution(width, height)
-        gpu.fill(1, 1, width, height, " ")
-        setupWidgedBorders()
-
-        gpu.setForeground(0x0e6900)
-        gpu.setBackground(0x6a7a94)
-
         m_reactor.shutDownRedstoneIOs()
 
-        while keepAlive do       --0.55
+        while keepAlive do        --0.55
             log.namedTimer("CYCLE")
-            m_lsc.tick()         -- 0.1
-            m_lsc.drawLSCStatus()      -- 0.0
+            m_lsc.tick()          -- 0.1
+            m_lsc.drawLSCStatus() -- 0.0
 
-            m_reactor.tick_all() -- 0.4 (If nothing is happening)
+            m_reactor.tick_all()  -- 0.4 (If nothing is happening)
 
             log.namedDebug("CYCLE")
             log.draw()

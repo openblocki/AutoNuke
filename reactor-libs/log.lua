@@ -41,6 +41,8 @@ local function draw()
       gpu.setForeground(0x665685)
     elseif v.data == SCRAM then
       gpu.setForeground(0xfc0303)
+    elseif v.data == EMPTY then
+      gpu.setForeground(0xffffff)
     end
     --print(message)
     gpu.set(left-5,top+k-6,message)
@@ -121,14 +123,17 @@ return {
   end,
 
   split = function()
-    log({message ="------------", data = EMPTY })
+    log({message ="------------", data = INFO })
+    draw()
   end,
 
   longSplit = function()
-    log({message = "---------------------------------", data = EMPTY})
+    log({message = "---------------------------------", data = INFO})
+    draw()
   end,
 
   beautify = function(m)
-    log({message = "#  " .. m, data = EMPTY})
+    log({message = "#  " .. m, data = INFO})
+    draw()
   end
 }
