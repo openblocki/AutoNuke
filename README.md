@@ -1,14 +1,14 @@
 # AutoNuke
-
 Vac-Nuke Manager for GTNH  </br>
-Made for usage to be a Simple as Possible
+Made for usage to be a Simple as Possible </br>
+
 
 Reactor Setup: </br>
 <img width="2560" height="1057" alt="2026-11-03_15 16 56" src="https://github.com/user-attachments/assets/590f0939-c753-4ee8-84e7-4047e912c346" />
 
 <img width="2560" height="1057" alt="2026-11-03_15 17 01" src="https://github.com/user-attachments/assets/393c1441-c23f-44c4-99fc-38516c87614d" />
 
-Interface can be filled With any Supportet Coolant or Rod,
+Interface can be filled With any Supportet Coolant or Rod. The Programm recognizes the Coolant and Fuel Rods Automatically when its Registering the Reactor
 <img width="2560" height="1057" alt="2026-11-03_15 17 03" src="https://github.com/user-attachments/assets/e1a4b31d-eb15-4768-a7dd-c871ac95663f" />
 
 <img width="2560" height="1057" alt="2026-11-03_15 17 13" src="https://github.com/user-attachments/assets/8794efc8-949a-446a-a678-f6ac74b1f57a" />
@@ -24,7 +24,7 @@ Installation Instructions: </br>
 2. run "inst" </br>
 3. run "AutoNuke" </br>
 
-Setup UI looks a bit bad Right now, but it should be understandable
+Setup UI looks a bit bad Right now, but it should be readable
 
 CURRENTLY SUPPORTET COOLANT:</br>
 Helium</br>
@@ -39,3 +39,7 @@ MoX (Including Heat Capacity - System can't heat up by itself yet)</br>
 High Density Uranium</br>
 Excited Uranium</br>
 High Density Plutonium</br>
+
+
+
+!INFO! This was made without the use of any AI. 100% Handmade. </br>
