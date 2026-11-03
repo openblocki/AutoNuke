@@ -97,7 +97,6 @@ local function main()
 
 
     setupWidgedBorders()
-    event.listen("touch", userClick)
 
     local function protected_main()
         m_reactor.shutDownRedstoneIOs()
