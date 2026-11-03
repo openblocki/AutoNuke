@@ -81,7 +81,6 @@ local function main()
             m_reactor.tick_all() -- 0.4 (If nothing is happening)
 
             log.namedDebug("CYCLE")
-            log.info("Finished Cycle")
             log.draw()
         end
 

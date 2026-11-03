@@ -270,10 +270,9 @@ function Reactor:isCoolantGood(coolant) -- Non Triggering
         local itemName = cool.item.name
 
         if currentHeat > maxHeat * c.COOLANT_ITEM.HEAT_THRESHOLD then
-            log.info("Changing Coolant for Reactor".. self:getID())
             table.insert(badCoolant, cool.slot)
         elseif itemName ~= c.COOLANT[self.coolant] then
-            log.warn("Unexpected Coolant for Reactor")
+            log.warn("Unexpected Coolant for Reactor "..self:getID())
             table.insert(badCoolant, cool.slot)
         end
 
@@ -295,10 +294,9 @@ function Reactor:areRodsGood(rod)
         local itemName = ro.item.name
 
         if itemName == c.DEPLETED_ROD[self.rod] then
-            log.info("Changing Fuel Rod for Reactor".. self:getID())
             table.insert(badRod, ro.slot)
         elseif itemName ~= c.ROD[self.rod] then
-            log.warn("Unexpected Fuel Rod for Reactor")
+            log.warn("Unexpected Fuel Rod for Reactor ".. self:getID())
             table.insert(badRod, ro.slot)
         end
 
@@ -322,7 +320,7 @@ function Reactor:checkCoolant(coolant)
     local coolantGood, badCoolant = self:isCoolantGood(coolant)
     if not coolantGood then
         for _, slot in pairs(badCoolant) do
-            log.error("Changing Coolant in Slot ".. slot)
+            log.info("Changing Coolant for Reactor ".. self:getID())
             self:changeCoolantInSlot(slot)
         end
     end
@@ -333,7 +331,7 @@ function Reactor:checkRods(rod)
     -- Maybe Do on Seperate Thread to since this can be non Blocking
     if not rodsGood then
         for _, slot in pairs(badRods) do
-            log.error("Changing Rod in Slot ".. slot)
+            log.info("Changing Rod for Reactor ".. self:getID())
             self:changeFuelRodInSlot(slot)
         end
     end
