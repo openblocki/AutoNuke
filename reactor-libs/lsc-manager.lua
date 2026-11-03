@@ -2,6 +2,7 @@ local c = require("reactor-libs.reactor_conf")
 local log = require("reactor-libs.log")
 local event = require("event")
 local component = require("component")
+local gpu = component.gpu
 
 local lsc = {}
 
@@ -37,6 +38,22 @@ local function setup()
     return 1
 end
 
+local function drawLSCStatus()
+
+    gpu.setBackground(0x6a7a94)
+    gpu.setForeground(0x0e6900)
+    gpu.fill(3, 2, 23, 5, " ")
+    gpu.set(3, 2, "[Max Power] " .. lsc.MAXPOWER)
+    gpu.set(3, 4, "[Current Power] " .. lsc.POWER)
+    gpu.set(3, 6, "[AVG Power] " .. lsc.AVGPOWER())
+end
+
+local function setupWidget()
+    gpu.fill(1, 1, 27, 7, " ")
+    gpu.set(1, 1, "LSC")
+    drawLSCStatus()
+end
+
 local function needsPower()
     if(lsc.AVGPOWER()<0) then return true end -- If Usage is Higher than Generation turn on regardless of Energy Level
 
@@ -57,5 +74,7 @@ return {
     tick = tick,
     setup = setup,
     needsPower = needsPower,
-    getLSC = getLSC
+    getLSC = getLSC,
+    setupWidget = setupWidget,
+    drawLSCStatus = drawLSCStatus
 }

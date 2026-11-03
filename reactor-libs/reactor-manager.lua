@@ -7,9 +7,17 @@ local REACTOR = require("reactor-libs.reactor")
 local event = require("event")
 local term = require("term")
 local component = require("component")
+local gpu = component.gpu
 
 local db = DB:new()
 local configdb = DB:new()
+
+
+--- Widget Data
+
+local left = 3
+local top = 13
+local width = 54
 
 ------------------------------------------------------------------------
 -----SAFETY
@@ -17,7 +25,7 @@ local configdb = DB:new()
 local function shutDownRedstoneIOs()
     local count = 1
     for a, _ in component.list("redstone", true) do
-        log.info("Shutting Down Redstone IO ".. a)
+        log.info("Shutting Down Redstone IO " .. a)
         component.proxy(a).setOutput({ 0, 0, 0, 0, 0, 0 })
         count = count + 1
     end
@@ -33,12 +41,12 @@ local unknown_reactors = {}
 
 ------------------------------------------------------------------------
 -----HELPERS
-local function sendShutdownToNetwork() -- These Events allow other Programs to Receive the info that the Reactors have Shut Down
-   local modem = require("modem")
-   
 
-   modem.broadcast(0, "AN/E-SHUTDOWN")
-   event.push("AN/E-SHUTDOWN")
+local function sendShutdownToNetwork() -- These Events allow other Programs to Receive the info that the Reactors have Shut Down
+    local modem = require("modem")
+
+    modem.broadcast(0, "AN/E-SHUTDOWN")
+    event.push("AN/E-SHUTDOWN")
 end
 
 local function SCRAM() -- Rewrite Done
@@ -47,7 +55,7 @@ local function SCRAM() -- Rewrite Done
     shutDownRedstoneIOs()
 
     for reactor in reactors do
-        log.scram("SCRAMMING REACTOR "..reactor:getID() .."!")
+        log.scram("SCRAMMING REACTOR " .. reactor:getID() .. "!")
         reactor:SCRAM()
     end
 
@@ -59,6 +67,8 @@ end
 
 ------------------------------------------------------------------------
 -----LOAD / STARTUP
+
+
 local function loadReactor(data) -- Rewrite Done
     local reactor = REACTOR:new(data)
 
@@ -80,7 +90,6 @@ local function loadReactors() -- Rewrite Done
 
             local data = db:getById(a)
             if data == nil then
-
                 log.error("Reactor could not be Retrieved from DB")
                 error("Reactor could not be Retrieved from DB")
             end
@@ -89,7 +98,6 @@ local function loadReactors() -- Rewrite Done
 
             log.info("Reactor successfully loaded!")
         else
-
             log.info("Reactor not Found in DB. Adding to Queue")
             unknown_reactors[#unknown_reactors + 1] = a
         end
@@ -117,12 +125,13 @@ local function resolveUnknownReactors()
         local transposer, tKey = t_helper.multiSelectNoDefault("Transposer for Reactor " .. adapter, transposers)
         local redstone_io, rKey = t_helper.multiSelectNoDefault("Redstone IO for Reactor " .. adapter, redstone_ios)
 
-        
+
         loadUnknownReactor({
             adapter_a = adapter,
             transposer_a = transposer,
-            redstone_io_a = redstone_io})
-            
+            redstone_io_a = redstone_io
+        })
+
         table.remove(transposers, tKey)
         table.remove(redstone_ios, rKey)
     end
@@ -145,6 +154,33 @@ local function getRedstoneIOs()
     end
 end
 
+local function updateWidget()
+    gpu.setBackground(0x6a7a94)
+    gpu.setForeground(0xffffff)
+
+    gpu.set(3, 13, "   │Reactor       │Heat  │Output      │Status")
+    gpu.set(3, 14, "───┼──────────────┼──────┼────────────┼───────────────────────────")
+    local reactor_display_format = " %s | %12s │ %3d%% │ %6dEU/t | %s"
+
+    local count = 0
+    for _, reactor in pairs(reactors) do
+        local output = reactor:getOutput()
+        local heat = reactor:getHeatPercentage()
+        local address = reactor:getShortID()
+        local status = reactor:getStatus()
+        local onOff = reactor:getIsReactorOn()
+
+        local statusColor = reactor:getStatusColor()
+
+        gpu.setBackground(statusColor)
+        gpu.fill(3, 15+count, 66, 1, " ")
+        gpu.set(3, 15 + count, string.format(reactor_display_format, onOff, address, heat, output, status))
+
+        count = count + 1
+    end
+    gpu.setBackground(0x6a7a94)
+end
+
 local function tick_all()
     log.namedTimer("TICK_ALL")
     for _, reactor in pairs(reactors) do
@@ -153,6 +189,7 @@ local function tick_all()
         log.namedDebug("SINGLE_REACTOR")
     end
     log.namedDebug("TICK_ALL")
+    updateWidget()
 end
 
 ------------------------------------------------------------------------
@@ -179,9 +216,23 @@ local function setup()
     return 1
 end
 
+local function setupWidget()
+    gpu.fill(1, 10, 70, 41, " ")
+    gpu.set(1, 10, "Reactors")
+    gpu.setBackground(0x6a7a94)
+    gpu.fill(3, 11, 66, 39, " ")
+    updateWidget()
+
+    if (#reactors > 20) then
+        gpu.set(3, 11, "Too Many Reactors can't display all!!!")
+    end
+end
+
 return {
     setup = setup,
     SCRAM = SCRAM,
     tick_all = tick_all,
-    shutDownRedstoneIOs = shutDownRedstoneIOs
+    shutDownRedstoneIOs = shutDownRedstoneIOs,
+    updateWidget = updateWidget,
+    setupWidget = setupWidget
 }

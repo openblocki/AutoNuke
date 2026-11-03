@@ -2,7 +2,6 @@ local m_reactor = require("reactor-libs.reactor-manager")
 local m_lsc = require("reactor-libs.lsc-manager")
 local log = require("reactor-libs.log")
 local component = require("component")
-local computer = require("computer")
 local term = require("term")
 local gpu = component.gpu
 
@@ -12,23 +11,20 @@ local function SCRAM()
     m_reactor.SCRAM()
 end
 
-local function drawLSCStatus()
-    local lsc = m_lsc.getLSC()
-
-    gpu.setBackground(0x6a7a94)
-    gpu.fill(2, 2, 23, 5, " ")
-    gpu.set(3, 2, "Max Power: " .. lsc.MAXPOWER)
-    gpu.set(3, 4, "Current Power: " .. lsc.POWER)
-    gpu.set(3, 6, "AVG Power: " .. lsc.AVGPOWER())
-end
-
 local function setupWidgedBorders()
     gpu.setBackground(0x3f3b47)
     gpu.setForeground(0xf1f72a)
-    gpu.fill(1, 1, 25, 7, " ")
-    gpu.set(1, 1, "LSC")
-    gpu.fill(78, 29, 83, 23, " ")
-    gpu.set(78, 29, "LOG")
+
+    m_lsc.setupWidget()
+
+    gpu.setBackground(0x3f3b47)
+    gpu.setForeground(0xf1f72a)
+    m_reactor.setupWidget()
+
+    gpu.setBackground(0x3f3b47)
+    gpu.setForeground(0xf1f72a)
+    log.setupWidget()
+
     gpu.setForeground(0x0e6900)
 end
 
@@ -76,7 +72,7 @@ local function main()
         while keepAlive do       --0.55
             log.namedTimer("CYCLE")
             m_lsc.tick()         -- 0.1
-            drawLSCStatus()      -- 0.0
+            m_lsc.drawLSCStatus()      -- 0.0
 
             m_reactor.tick_all() -- 0.4 (If nothing is happening)
 

@@ -26,7 +26,7 @@ local EMPTY = ""
 
 local function draw()
   gpu.setBackground(0x6a7a94)
-  gpu.fill(left,top,width-1,height, " ")
+  gpu.fill(left-5,top-5,width+4,height+5, " ")
 
 
   for k,v in pairs(LOG) do
@@ -43,10 +43,16 @@ local function draw()
       gpu.setForeground(0xfc0303)
     end
     --print(message)
-    gpu.set(left,top+k-1,message)
+    gpu.set(left-5,top+k-6,message)
   end
 
   gpu.setForeground(0x0e6900)
+end
+
+local function setupWidget()
+  gpu.fill(73, 24, 88, 28, " ")
+  gpu.set(73, 24, "LOG")
+  draw()
 end
 
 local function log(m)
@@ -59,6 +65,7 @@ end
 
 return {
   draw = draw,
+  setupWidget = setupWidget,
 
   info = function(m)
     log({message = m, data = INFO})
