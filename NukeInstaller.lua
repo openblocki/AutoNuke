@@ -3,7 +3,7 @@ print("Installing AutoNuke")
 local internet = require("internet")
 local fs = require("filesystem")
 
-local url = "https://github.com/openblocki/NukeManager/"
+local url = "https://raw.githubusercontent.com/openblocki/NukeManager/main/"
 
 local home = "/home/"
 local libs = "reactor-libs/"
