@@ -12,10 +12,11 @@ local filesTD = {
     libs .. "db.lua",
     libs .. "log.lua",
     libs .. "lsc-manager.lua",
+    libs .. "reactor-manager.lua",
     libs .. "reactor-layout.lua",
     libs .. "reactor.lua",
     libs .. "reactor_conf.lua",
-    libs .. "term-helper.lua",
+    libs .. "term_helper.lua",
 }
 
 fs.makeDirectory(home .. libs)
