@@ -1,7 +1,6 @@
-local log = require("log")
+local log = require("reactor-libs.log")
 return {
     multiSelect = function (label, options, defaultKey, defaultValue)
-        
 
         local optionKeys = {}
 
@@ -11,8 +10,7 @@ return {
 
         log.longSplit()
         log.beautify("Please Select ".. label)
-
-        
+ 
         for k, v in pairs(optionKeys) do
             log.beautify(k..". "..v)
         end
@@ -20,7 +18,7 @@ return {
 
         local userInput = io.read()
         userInput = tonumber(userInput)
-        
+
         if userInput == nil or userInput == 0 then
             return defaultValue
         end
