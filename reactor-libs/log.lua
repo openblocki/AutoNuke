@@ -7,16 +7,22 @@ local top = 30
 local width= 80
 local height= 20
 
+local lastTimer = 0
+local computer = require("computer")
+
+
+local NAMED_TIMESTAMP = {}
 ------------------------------------------------------------------------
 -----LOGGING
 
 local LOG = {}
 
-local INFO = "INFO"
-local WARN = "WARN"
-local ERROR = "ERROR"
-local VERBOSE = "VERBOSE"
-local SCRAM = "!SCRAM!"
+local INFO = "[INFO] "
+local WARN = "[WARN] "
+local ERROR = "[ERROR] "
+local VERBOSE = "[VERBOSE] "
+local SCRAM = "[!SCRAM!] "
+local EMPTY = ""
 
 local function draw()
   gpu.setBackground(0x6a7a94)
@@ -24,7 +30,7 @@ local function draw()
 
 
   for k,v in pairs(LOG) do
-    local message = "["..v.data.."] "..v.message
+    local message = v.data ..v.message
     if v.data == INFO then
       gpu.setForeground(0x9494e3)
     elseif v.data == WARN then
@@ -36,6 +42,7 @@ local function draw()
     elseif v.data == SCRAM then
       gpu.setForeground(0xfc0303)
     end
+    --print(message)
     gpu.set(left,top+k-1,message)
   end
 
@@ -43,6 +50,7 @@ local function draw()
 end
 
 local function log(m)
+  if m.data == VERBOSE then return end
   if #LOG==20 then
     table.remove(LOG,1)
   end
@@ -66,11 +74,11 @@ return {
   end,
 
   verbose = function(m)
-    local caller = debug.getinfo(3, "n")
-    if caller.name == nil then
-      caller.name = "main"
-    end
-    log({message = "|" .. caller.name .. "| " .. m, data = VERBOSE})
+   local caller = debug.getinfo(3, "n")
+   if caller.name == nil then
+     caller.name = "main"
+   end
+   log({message = "|" .. caller.name .. "| " .. m, data = VERBOSE})
   end,
 
   vWarn = function(m)
@@ -81,20 +89,39 @@ return {
     log({message = "|" .. caller.name .. "| " .. m, data = WARN})
   end,
 
+  timestamp = function ()
+    lastTimer = computer.uptime()
+  end,
+
+  namedTimer = function (name)
+    NAMED_TIMESTAMP[name] = computer.uptime()
+  end,
+
+  namedDebug = function (name)
+    local now = computer.uptime()
+    log({message = name .. " took ".. now - NAMED_TIMESTAMP[name]  .. " seconds", data = VERBOSE})
+  end,
+
+  timedDebug = function (m)
+    local now = computer.uptime()
+    log({message = "Since last Log: " .. now - lastTimer .." ".. m ,data = VERBOSE})
+    lastTimer = now
+  end,
+
   scram = function(m)
     log({message = m, data = SCRAM})
     draw()
   end,
 
   split = function()
-    log("------------")
+    log({message ="------------", data = EMPTY })
   end,
 
   longSplit = function()
-    log("---------------------------------")
+    log({message = "---------------------------------", data = EMPTY})
   end,
 
   beautify = function(m)
-    log("#  " .. m)
+    log({message = "#  " .. m, data = EMPTY})
   end
 }

@@ -16,7 +16,7 @@ local configdb = DB:new()
 
 local function shutDownRedstoneIOs()
     local count = 1
-    for a, n in component.list("redstone", true) do
+    for a, _ in component.list("redstone", true) do
         log.info("Shutting Down Redstone IO ".. a)
         component.proxy(a).setOutput({ 0, 0, 0, 0, 0, 0 })
         count = count + 1
@@ -30,7 +30,6 @@ local reactors = {}
 local transposers = {}
 local redstone_ios = {}
 local unknown_reactors = {}
-local INTERFACE_COOLANT_SLOT = 1
 
 ------------------------------------------------------------------------
 -----HELPERS
@@ -74,7 +73,7 @@ local function loadUnknownReactor(data) -- Rewrite Done
 end
 
 local function loadReactors() -- Rewrite Done
-    for a, n in component.list("reactor_chamber", true) do
+    for a, _ in component.list("reactor_chamber", true) do
         log.info("Reactor Chamber Found: " .. a)
         if db:objectExists(a) then
             log.info("Reactor Found in Database. Loading now")
@@ -97,7 +96,7 @@ local function loadReactors() -- Rewrite Done
         log.draw()
     end
 
-    for k, v in pairs(reactors) do
+    for _, v in pairs(reactors) do
         for x, y in pairs(transposers) do
             if y == v.data.transposer then
                 table.remove(transposers, x)
@@ -111,13 +110,14 @@ local function loadReactors() -- Rewrite Done
     end
 end
 
-local function resolveUnknownReactors() -- Rewrite Done
-    for k, adapter in pairs(unknown_reactors) do
+local function resolveUnknownReactors()
+    for _, adapter in pairs(unknown_reactors) do
         term.clear()
 
-        local transposer, tKey = t_helper.multiSelectNoDefault("Transposer for Reactor " .. v, transposers)
-        local redstone_io, rKey = t_helper.multiSelectNoDefault("Redstone IO for Reactor " .. v, redstone_ios)
+        local transposer, tKey = t_helper.multiSelectNoDefault("Transposer for Reactor " .. adapter, transposers)
+        local redstone_io, rKey = t_helper.multiSelectNoDefault("Redstone IO for Reactor " .. adapter, redstone_ios)
 
+        
         loadUnknownReactor({
             adapter_a = adapter,
             transposer_a = transposer,
@@ -131,7 +131,7 @@ end
 
 local function getTransposers()
     local count = 1
-    for a, n in component.list("transposer", true) do
+    for a, _ in component.list("transposer", true) do
         transposers[count] = a
         count = count + 1
     end
@@ -139,18 +139,20 @@ end
 
 local function getRedstoneIOs()
     local count = 1
-    for a, n in component.list("redstone", true) do
+    for a, _ in component.list("redstone", true) do
         redstone_ios[count] = a
         count = count + 1
     end
 end
 
-local function tick_all() -- Rewritten / Update Logging
-    for reactor in reactors do
-        reactor:tick()
+local function tick_all()
+    log.namedTimer("TICK_ALL")
+    for _, reactor in pairs(reactors) do
+        log.namedTimer("SINGLE_REACTOR")
+        reactor:tick() --0.35 In Blank Run
+        log.namedDebug("SINGLE_REACTOR")
     end
-
-    log.info("Ticked Reactors")
+    log.namedDebug("TICK_ALL")
 end
 
 ------------------------------------------------------------------------
@@ -168,8 +170,8 @@ local function setup()
     resolveUnknownReactors()
 
     -- Rewrite Done
-    for reactor in reactors do
-        reactor.setup()
+    for _, reactor in pairs(reactors) do
+        reactor:setup()
         log.draw()
     end
     log.info("Reactor Setup Complete!")
@@ -180,5 +182,6 @@ end
 return {
     setup = setup,
     SCRAM = SCRAM,
-    tick_all = tick_all
+    tick_all = tick_all,
+    shutDownRedstoneIOs = shutDownRedstoneIOs
 }

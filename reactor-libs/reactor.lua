@@ -33,6 +33,7 @@ end
 
 function Reactor:new(data)
     local instance = setmetatable({}, self)
+    self.__index = self
 
     self.coolant = data.coolant or c.DEFAULT.COOLANT
     self.rod = data.rod or c.DEFAULT.ROD
@@ -70,7 +71,7 @@ function Reactor:setup()
             log.verbose("Is: ".. item.name)
 
             if layout.getTypeForSlot(slot) == c.WORD.COOLANT then
-                self:changeCoolantForSlot(slot)
+                self:changeCoolantInSlot(slot)
             else
                 self:changeFuelRodInSlot(slot)
             end
@@ -177,36 +178,65 @@ function Reactor:tick()
         self.skip_cycle = false
         return
     end
+    self:checkHeat() -- 0.05
 
-    self:checkHeat()
-    self:checkCoolant()
-    self:checkRods()
+    local coolant, rods = self:getContents() -- 0.049
 
-    if self:isActive() and not self:canBeActive() then
+    self:checkCoolant(coolant) -- 0.0
+    self:checkRods(rods) -- 0.0 
+    local isActive = self:isActive() -- 0.0
+    local canBeActive = self:canBeActive() --0.1
+    local needsPower = lsc.needsPower() -- 0.0
+
+    if isActive == canBeActive and needsPower then -- 0.0
+        goto finish_tick
+    elseif isActive and not canBeActive then
         log.info("Reactor ".. self:getID() .. " is active but should be off. Turning off")
         self:deactivate()
-    elseif not self:isActive() and self:canBeActive() and lsc.needsPower() then
+    elseif not isActive and canBeActive and needsPower then
         log.info("Turning on Reactor ".. self:getID() .. ".")
         self:activate()
-    elseif self:isActive() and self:canBeActive() and not lsc.needsPower() then
+    elseif isActive and canBeActive and not needsPower then
         log.info("Deactivating Reactor "..self:getID().." due to high Power Levels")
         self:deactivate()
-    elseif self:isActive() == self:canBeActive() and lsc.needsPower() then
-        goto finish_tick
     else
         log.error("Unexcepted state missmatch. Deactivating for next Cycle")
         self:skipCycle()
     end
-
     ::finish_tick::
+end
+
+function Reactor:getContents()
+    local lay = layout.getReactorLayout(c.WORD.COOLANT, c.WORD.ROD)
+
+    local items = self.transposer.getAllStacks(c.REACTOR.SIDE)
+
+    local coolant = {}
+    local rods = {}
+
+    for k, v in pairs(lay) do
+        if v == c.WORD.COOLANT then
+            table.insert(coolant, {item = items[k], slot = k })
+        else
+            table.insert(rods, {item = items[k], slot = k })
+        end
+    end
+
+    return coolant, rods
 end
 
 function Reactor:isActive()
     return self.redstone_io.getOutput(c.REDSTONEIO.SIDE) > 0
 end
 
-function Reactor:canBeActive()
-    return (self:isHeatThresholdGood() + self:isCoolantGood() + self:areRodsGood()) == 3
+function Reactor:canBeActive() -- Make Parallel?
+    local cool, rod = self:getContents()
+    local heat = self:isHeatThresholdGood() -- 0.05
+    local coolant = self:isCoolantGood(cool) -- 0.7
+    local rods = self:areRodsGood(rod) -- 2.0 (Its Acceptable if Rods are Depleted for a single Cycle)
+
+    local canBeActive = heat and coolant and rods
+    return canBeActive
 end
 
 function Reactor:isHeatThresholdGood() -- Non Triggering
@@ -224,28 +254,27 @@ function Reactor:isHeatThresholdGood() -- Non Triggering
     return true
 end
 
-function Reactor:isCoolantGood() -- Non Triggering
+function Reactor:isCoolantGood(coolant) -- Non Triggering
     local badCoolant = {}
 
-    for slot in layout.getCoolantSlots() do
-        local item = self.reactor_chamber.getStackInSlot(c.REACTOR.SIDE, slot)
+    for _, cool in pairs(coolant) do
 
-        if not item then
-            log.warn("Reactor ".. self:getID() .. " missing Coolant in Slot ".. slot)
-            table.insert(badCoolant, slot)
+        if not cool.item then
+            log.warn("Reactor ".. self:getID() .. " missing Coolant in Slot ".. cool.slot)
+            table.insert(badCoolant, cool.slot)
             goto nextCoolant
         end
 
-        local currentHeat = item.damage
-        local maxHeat = item.maxDamage
-        local itemName = item.name
+        local currentHeat = cool.item.damage
+        local maxHeat = cool.item.maxDamage
+        local itemName = cool.item.name
 
         if currentHeat > maxHeat * c.COOLANT_ITEM.HEAT_THRESHOLD then
             log.info("Changing Coolant for Reactor".. self:getID())
-            table.insert(badCoolant, slot)
+            table.insert(badCoolant, cool.slot)
         elseif itemName ~= c.COOLANT[self.coolant] then
             log.warn("Unexpected Coolant for Reactor")
-            table.insert(badCoolant, slot)
+            table.insert(badCoolant, cool.slot)
         end
 
         ::nextCoolant::
@@ -254,25 +283,23 @@ function Reactor:isCoolantGood() -- Non Triggering
     return #badCoolant>0, badCoolant
 end
 
-function Reactor:areRodsGood() -- Non Triggering
+function Reactor:areRodsGood(rod)
     local badRod = {}
 
-    for slot in layout.getRodSlots() do
-        local item = self.reactor_chamber.getStackInSlot(c.REACTOR.SIDE, slot)
-
-        if not item then
-            log.warn("Reactor ".. self:getID() .. " missing Fuel Rod in Slot ".. slot)
-            table.insert(badRod, slot)
+    for _, ro in pairs(rod) do
+        if not ro.item then
+            log.warn("Reactor ".. self:getID() .. " missing Fuel Rod in Slot ".. ro.slot)
+            table.insert(badRod, ro.slot)
             goto nextRod
         end
-        local itemName = item.name
+        local itemName = ro.item.name
 
         if itemName == c.DEPLETED_ROD[self.rod] then
             log.info("Changing Fuel Rod for Reactor".. self:getID())
-            table.insert(badRod, slot)
+            table.insert(badRod, ro.slot)
         elseif itemName ~= c.ROD[self.rod] then
             log.warn("Unexpected Fuel Rod for Reactor")
-            table.insert(badRod, slot)
+            table.insert(badRod, ro.slot)
         end
 
         ::nextRod::
@@ -291,21 +318,22 @@ function Reactor:checkHeat()
     self:SCRAM("HEAT THRESHOLD OVERSTEPPED")
 end
 
-function Reactor:checkCoolant() -- Maybe Copy isCoolantGood but make it swap while the check is running if current way is not fast enough
-    local coolantGood, badCoolant = self:isCoolantGood()
-
+function Reactor:checkCoolant(coolant)
+    local coolantGood, badCoolant = self:isCoolantGood(coolant)
     if not coolantGood then
-        for slot in badCoolant do
+        log.error("COOLANT IS GETTING CHANGEND")
+        for _, slot in pairs(badCoolant) do
             self:changeCoolantInSlot(slot)
         end
     end
 end
 
-function Reactor:checkRods() -- Check if any Rods are depleted or not present and replace or shutdown if not possible
-    local rodsGood, badRods = self:areRodsGood()
-
+function Reactor:checkRods(rod)
+    local rodsGood, badRods = self:areRodsGood(rod)
+    -- Maybe Do on Seperate Thread to since this can be non Blocking
     if not rodsGood then
-        for slot in badRods do
+        log.error("RODS ARE GETTING CHANGEND")
+        for _, slot in pairs(badRods) do
             self:changeFuelRodInSlot(slot)
         end
     end
@@ -330,8 +358,11 @@ function Reactor:shutOff()
     self:deactivate()
 
     self:checkHeat()
-    self:checkCoolant()
-    self:checkRods()
+
+    local coolant, rods = self:getContents()
+
+    self:checkCoolant(coolant)
+    self:checkRods(rods)
 end
 
 local function removeAllFuelRods(self)

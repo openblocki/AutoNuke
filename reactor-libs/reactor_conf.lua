@@ -68,6 +68,6 @@ return {
 
     WORD = {
         COOLANT = "COOLANT",
-        ROD = "ROD"
+        ROD = "ROD",
     }
 }
