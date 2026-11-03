@@ -81,17 +81,22 @@ local function main()
             m_reactor.tick_all() -- 0.4 (If nothing is happening)
 
             log.namedDebug("CYCLE")
+            log.info("Finished Cycle")
             log.draw()
         end
 
 
-        log.info("out of cycle")
+        log.error("Out of Cycle")
         m_reactor.shutDownRedstoneIOs()
     end
 
     local status, err = pcall(protected_main)
-    log.warn(tostring(keepAlive))
-    log.warn("CONTROLL SCRIPT FINISHED")
+    log.error(err)
+    log.error(tostring(keepAlive))
+    log.error("CONTROLL SCRIPT FINISHED")
+    print("CONTROLL SCRIPT ERRORED")
+    print(tostring(keepAlive))
+    print(err)
 
     if not status then
         m_reactor.shutDownRedstoneIOs()

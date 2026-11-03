@@ -280,7 +280,7 @@ function Reactor:isCoolantGood(coolant) -- Non Triggering
         ::nextCoolant::
     end
 
-    return #badCoolant>0, badCoolant
+    return #badCoolant==0, badCoolant
 end
 
 function Reactor:areRodsGood(rod)
@@ -305,7 +305,7 @@ function Reactor:areRodsGood(rod)
         ::nextRod::
     end
 
-    return #badRod>0, badRod
+    return #badRod==0, badRod
 end
 
 function Reactor:checkHeat()
@@ -321,8 +321,8 @@ end
 function Reactor:checkCoolant(coolant)
     local coolantGood, badCoolant = self:isCoolantGood(coolant)
     if not coolantGood then
-        log.error("COOLANT IS GETTING CHANGEND")
         for _, slot in pairs(badCoolant) do
+            log.error("Changing Coolant in Slot ".. slot)
             self:changeCoolantInSlot(slot)
         end
     end
@@ -332,8 +332,8 @@ function Reactor:checkRods(rod)
     local rodsGood, badRods = self:areRodsGood(rod)
     -- Maybe Do on Seperate Thread to since this can be non Blocking
     if not rodsGood then
-        log.error("RODS ARE GETTING CHANGEND")
         for _, slot in pairs(badRods) do
+            log.error("Changing Rod in Slot ".. slot)
             self:changeFuelRodInSlot(slot)
         end
     end
