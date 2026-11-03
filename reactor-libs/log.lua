@@ -28,7 +28,6 @@ local function draw()
   gpu.setBackground(0x6a7a94)
   gpu.fill(left-5,top-5,width+4,height+5, " ")
 
-
   for k,v in pairs(LOG) do
     local message = v.data ..v.message
     if v.data == INFO then
@@ -58,7 +57,7 @@ local function setupWidget()
 end
 
 local function log(m)
-  if m.data == VERBOSE then return end
+  --if m.data == VERBOSE then return end
   if #LOG==20 then
     table.remove(LOG,1)
   end

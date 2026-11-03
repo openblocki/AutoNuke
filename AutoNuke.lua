@@ -15,13 +15,13 @@ end
 
 local function setupWidgedBorders()
     gpu.setBackground(0x6b0014)
-    gpu.fill(90,5,60,15, " ")
+    gpu.fill(90, 5, 60, 15, " ")
 
     gpu.setBackground(0xb30021)
-    gpu.fill(92,6,56,13, " ")
+    gpu.fill(92, 6, 56, 13, " ")
 
     gpu.setForeground(0xaed1ce)
-    gpu.set(95,8,"SHUTDOWN")
+    gpu.set(95, 8, "SHUTDOWN")
 
     gpu.setBackground(0x3f3b47)
     gpu.setForeground(0xf1f72a)
@@ -43,8 +43,8 @@ local function shutOff()
     keepAlive = false
 end
 
-local function userClick(_,_, x, y,_)
-    if x>90 and x<150 and y>5 and y<20 then
+local function userClick(x, y)
+    if x > 90 and x < 150 and y > 5 and y < 20 then
         log.info("User sent for ShutOff - Shutton down at the end of Cycle")
         log.draw()
         shutOff()
@@ -61,9 +61,6 @@ local function main()
     keepAlive = true
 
     screen.setTouchModeInverted(true)
-
-    event.listen("touch", userClick)
-    event.listen("AN/CONTROLL/SHUTDOWN", shutOff)
 
     gpu.setBackground(0x000000)
     gpu.setResolution(width, height)
@@ -84,7 +81,7 @@ local function main()
 
     log.info("SETTING UP LSC")
     local lsc_setup_result = m_lsc.setup()
-    
+
     if not lsc_setup_result then
         log.error("LSC SETUP NOT SUCCESSFULL. SHUTTING DOWN!")
         m_reactor.shutDownRedstoneIOs()
@@ -102,16 +99,23 @@ local function main()
     local function protected_main()
         m_reactor.shutDownRedstoneIOs()
 
-        while keepAlive do        --0.55
-            log.namedTimer("CYCLE")
-            m_lsc.tick()          -- 0.1
-            m_lsc.drawLSCStatus() -- 0.0
+        while keepAlive do
+            local eventType, _, x, y, _, _ = event.pull(0)
 
-            m_reactor.tick_all()  -- 0.4 (If nothing is happening)
+            if eventType == "touch" then
+                userClick(x, y)
+            elseif eventType == "AN/CONTROLL/SHUTDOWN" then
+                shutOff()
+            end
+
+            log.namedTimer("CYCLE")
+            m_lsc.tick()
+            m_lsc.drawLSCStatus()
+
+            m_reactor.tick_all()
 
             log.namedDebug("CYCLE")
             log.draw()
-            os.sleep(0)
         end
 
 
@@ -133,6 +137,7 @@ end
 term.clear()
 main()
 
+event.ignore("touch", shutOff)
 log.error("EOF")
 gpu.setBackground(0x000000)
 term.clear()
