@@ -79,3 +79,4 @@ Idea:
 Not so important Todos: </br>
 - Create UI Framework so i dont have to deal with gpu.fill(x, y, width, height, " ")
 - Make UI look better (im not a graphical designer)
+- Add Proper UI for Setup cause what the hell is that
