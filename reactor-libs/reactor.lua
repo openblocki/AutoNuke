@@ -9,6 +9,7 @@ local Reactor = {
     transposer = nil,      --PROXY
     redstone_io = nil,     --PROXY
 
+    maxheat = 100, -- Defaults to 100 to SCRAM quickly in case of bad Setup
     coolant = nil,
     rod = nil,
 
@@ -24,7 +25,8 @@ local Reactor = {
     data = {
         adapter_a = nil, -- Acts as ID of Reactor
         transposer_a = nil,
-        redstone_io_a = nil
+        redstone_io_a = nil,
+        maxheat = 100 -- Defaults to 100 to SCRAM quickly in case of bad Setup
     }
 }
 
@@ -37,6 +39,7 @@ function Reactor:new(data)
     local instance = setmetatable({}, self)
     self.__index = self
 
+    self.maxHeat = self.reactor_chamber.getMaxHeat() or 100
     self.coolant = data.coolant or c.DEFAULT.COOLANT
     self.rod = data.rod or c.DEFAULT.ROD
 
@@ -50,6 +53,7 @@ function Reactor:new(data)
     self.override = data.override or false
     self.override_reason = data.override_reason or "No Reason Specified"
 
+    self.data.maxHeat = self.maxHeat
     self.data.adapter_a = data.adapter_a
     self.data.transposer_a = data.transposer_a
     self.data.redstone_io_a = data.redstone_io_a
@@ -88,6 +92,30 @@ function Reactor:setup()
     end
 
     log.info("Setup for Reactor " .. self:getShortID() .. " done.")
+end
+
+function Reactor:warmUp()
+    local currentHeatPercentage = self:getHeatPercentage()
+    local heatGoal = c.REACTOR.HEAT.WARMUP_MOX
+    if currentHeatPercentage/100 >= heatGoal then
+        log.info("Warmup Phase was cancelled as Reactor " .. self:getShortID() .." is already at or over Heat Goal")
+        log.info("Current Heat: " .. currentHeatPercentage .. "%. Heat Goal: "..heatGoal*100 .."%")
+        log.draw()
+        return 1
+    end
+
+    self:deactivate()
+    self:changeFuelRodInSlot(1) -- One Rod may be to slow, maybe increase that
+
+    self:activate()
+     while self:getHeatPercentage() < heatGoal do
+        os.sleep(0.5) -- Lets the OS yield so this doesnt crash
+     end
+    self:deactivate()
+
+    log.info("Warm Up for Reactor ".. self:getShortID() .. " finished. Continuing Setup.")
+    log.draw()
+    self.transposer.transferItem(c.REACTOR.SIDE, c.INTERFACE.SIDE, 1, 1, 9)
 end
 
 function Reactor:getData() -- Used to get Data to load into Database
@@ -153,7 +181,6 @@ function Reactor:changeFuelRodInSlot(slot)
 
     log.info("Changing Fuel Rod for Reactor " .. self:getShortID())
 
-
     local transposer = self.transposer
 
     local reactorItem = transposer.getStackInSlot(c.REACTOR.SIDE, slot)
@@ -165,8 +192,9 @@ function Reactor:changeFuelRodInSlot(slot)
     local interfaceItem = transposer.getStackInSlot(c.INTERFACE.SIDE, 1)
 
     if not interfaceItem then
-        log.error("Interface of Reactor " .. self:getShortID() .. " has run out of Fuel Rods, skipping next Cycle")
-        self:skipCycle("No Fuel Rods in Interface")
+        log.warn("Interface of Reactor " .. self:getShortID() .. " has run out of Fuel Rods")
+        self.status = "Missing Fuel Rods"
+        --self:skipCycle("No Fuel Rods in Interface") -- Deactivated for now since it is not Harmfull
         return 0
     end
 
@@ -247,12 +275,12 @@ end
 
 function Reactor:isHeatThresholdGood() -- Non Triggering
     local currentHeat = self.reactor_chamber.getHeat()
-    if c.ROD[self.rod] == c.ROD.MOX then
-        if (currentHeat >= c.REACTOR.HEAT.MAX * c.REACTOR.HEAT.THRESHOLD_MOX) then
+    if c.MOX_BEHAVIOUR[self.rod] then
+        if (currentHeat >= maxHeat * c.REACTOR.HEAT.THRESHOLD_MOX) then
             return false
         end
     else
-        if currentHeat >= c.REACTOR.HEAT.MAX * c.REACTOR.HEAT.THRESHOLD then
+        if currentHeat >= maxHeat * c.REACTOR.HEAT.THRESHOLD then
             return false
         end
     end
@@ -316,9 +344,12 @@ function Reactor:checkHeat()
         return
     end
 
+    local maxHeat = self.reactor_chamber.getMaxHeat()
+    local heat = self.reactor_chamber.getHeat()
+
     log.error("Reactor " .. self:getShortID() .. " went over the Heat threshold. ")
-    log.error(self.reactor_chamber.getHeat() ..
-    "/" .. c.REACTOR.HEAT.MAX .. " => " .. c.REACTOR.HEAT.MAX / self.reactor_chamber.getHeat())
+    log.error(heat ..
+    "/" .. maxHeat .. " => " .. (maxHeat/heat)*100 .. "%")
     self:SCRAM("HEAT THRESHOLD OVERSTEPPED")
 end
 
@@ -350,11 +381,13 @@ function Reactor:skipCycle(reason)
 end
 
 function Reactor:activate()
+    self.redstone_io.setOutput(c.REDSTONEIO.SIDE_EXTRA, 15)
     self.redstone_io.setOutput(c.REDSTONEIO.SIDE, 15)
 end
 
 -- Only turns off Redstone IO
 function Reactor:deactivate()
+    self.redstone_io.setOutput(c.REDSTONEIO.SIDE_EXTRA, 0)
     self.redstone_io.setOutput(c.REDSTONEIO.SIDE, 0)
 end
 
@@ -372,7 +405,7 @@ end
 
 local function removeAllFuelRods(self)
     local slot = 1
-    for item in self.transposer.getAllStacks(c.REACTOR.SIDE) do
+    for item in self.transposer.getAllStacks(c.REACTOR.SIDE) do -- Remove If check to increase Speed
         if not item then goto next end
         if item.name == self.rod then
             self.transposer.transferItem(c.REACTOR.SIDE, c.INTERFACE.SIDE, 1, slot, 9)
