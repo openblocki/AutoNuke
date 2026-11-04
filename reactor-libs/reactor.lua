@@ -9,7 +9,7 @@ local Reactor = {
     transposer = nil,      --PROXY
     redstone_io = nil,     --PROXY
 
-    maxheat = 100, -- Defaults to 100 to SCRAM quickly in case of bad Setup
+    maxHeat = 100, -- Defaults to 100 to SCRAM quickly in case of bad Setup
     coolant = nil,
     rod = nil,
 
@@ -39,7 +39,6 @@ function Reactor:new(data)
     local instance = setmetatable({}, self)
     self.__index = self
 
-    self.maxHeat = self.reactor_chamber.getMaxHeat() or 100
     self.coolant = data.coolant or c.DEFAULT.COOLANT
     self.rod = data.rod or c.DEFAULT.ROD
 
@@ -49,6 +48,8 @@ function Reactor:new(data)
     throw("PROXY FOR REACTOR TRANSPOSER " .. data.transposer_a .. " NOT FOUND!")
     self.redstone_io = component.proxy(data.redstone_io_a) or
     throw("PROXY FOR REACTOR REDSTONE_IO " .. data.redstone_io_a .. " NOT FOUND!")
+
+    self.maxHeat = self.reactor_chamber.getMaxHeat() or 100
 
     self.override = data.override or false
     self.override_reason = data.override_reason or "No Reason Specified"
@@ -124,6 +125,7 @@ function Reactor:getData() -- Used to get Data to load into Database
     data.rod = self.rod
     data.override = self.override
     data.override_reason = self.override_reason
+    data.status = self.status
 
     return data
 end
@@ -276,11 +278,11 @@ end
 function Reactor:isHeatThresholdGood() -- Non Triggering
     local currentHeat = self.reactor_chamber.getHeat()
     if c.MOX_BEHAVIOUR[self.rod] then
-        if (currentHeat >= maxHeat * c.REACTOR.HEAT.THRESHOLD_MOX) then
+        if (currentHeat >= self.maxHeat * c.REACTOR.HEAT.THRESHOLD_MOX) then
             return false
         end
     else
-        if currentHeat >= maxHeat * c.REACTOR.HEAT.THRESHOLD then
+        if currentHeat >= self.maxHeat * c.REACTOR.HEAT.THRESHOLD then
             return false
         end
     end
@@ -429,7 +431,7 @@ end
 
 -- @param reason<string?> = "SCRAM"
 function Reactor:SCRAM(reason)
-    log.error("SCRAMMING REACTOR")
+    log.scram("SCRAMMING REACTOR")
 
     self:deactivate()
     removeAllFuelRods(self)

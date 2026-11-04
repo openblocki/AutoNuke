@@ -9,8 +9,8 @@ local event = require("event")
 screen.setPrecise(true)
 local keepAlive = false
 
-local function SCRAM()
-    m_reactor.SCRAM()
+local function SCRAM(reason)
+    m_reactor.SCRAM(reason or "Unknown SCRAM Source")
 end
 
 local border_width = 2
@@ -34,8 +34,8 @@ local widget = {
         y = 5,
         width = 50,
         height = 15,
-        info = "User sent for SCRAM - God help us all.",
-        callback = SCRAM
+        info = "User sent for SCRAM - May God help us all.",
+        callback = function() SCRAM("User sent for SCRAM") end
     }
 }
 
@@ -44,7 +44,7 @@ local function drawBox(x,y, width, height, color, borderColor)
     gpu.fill(x,y,width,height, " ")
 
     gpu.setBackground(color)
-    gpu.fill(x+border_width, y+border_height, width-border_width*2, height-border_height*2)
+    gpu.fill(x+border_width, y+border_height, width-border_width*2, height-border_height*2, " ")
 end
 
 local function drawText(text, x, y, color)
@@ -55,7 +55,7 @@ end
 local function setupWidgedBorders()
 
     drawBox(widget.shutDown.x, widget.shutDown.y, widget.shutDown.width, widget.shutDown.height, 0xb30021 , 0x6b0014)
-    drawText("SHUTDOWN", 95, 8, 0xaed1ce)
+    drawText("SHUTDOWN", widget.shutDown.x+1,widget.shutDown.y+2, 0xaed1ce)
 
     drawBox(widget.SCRAM.x, widget.SCRAM.y, widget.SCRAM.width, widget.SCRAM.height, 0xb30021 , 0x6b0014)
     drawText("SCRAM SCRAM SCRAM", widget.SCRAM.x+3, widget.SCRAM.y+3, 0xffffff)
@@ -76,17 +76,22 @@ local function setupWidgedBorders()
 end
 
 local function addToWidget(address, object)
-    table.insert(widget, address, object)
+   widget[address] = object
+end
+
+local function getWidget(address)
+    return widget[address]
 end
 
 local function userClick(x, y)
-    for k, wid in widget do
+    for k, wid in pairs(widget) do
         if x > wid.x and x < wid.x+wid.width and y > wid.y and y < wid.y+wid.height then
             log.info(wid.info)
             log.draw()
             wid.callback()
-            table.remove(widget, k)
-            return wid.isReactor or false
+            widget[k] = nil
+
+            return true
         end
     end
 
@@ -99,8 +104,6 @@ local function main()
 
     keepAlive = true
 
-    screen.setTouchModeInverted(true)
-
     gpu.setBackground(0x000000)
     gpu.setResolution(width, height)
 
@@ -108,7 +111,7 @@ local function main()
 
     log.info("SETTING UP REACTORS")
 
-    local reactor_setup_result = m_reactor.setup(addToWidget)
+    local reactor_setup_result = m_reactor.setup(addToWidget, getWidget)
 
     if not reactor_setup_result then
         log.error("REACTOR SETUP NOT SUCCESSFULL. SCRAMMING!")
@@ -139,12 +142,12 @@ local function main()
         m_reactor.shutDownRedstoneIOs()
 
         while keepAlive do
-            local eventType, _, x, y, _, _ = event.pull(0)
+            local eventType, _, x, y, _, _ = event.pull(1)
+
+            screen.setTouchModeInverted(false)
 
             if eventType == "touch" then
                 userClick(x, y)
-            elseif eventType == "AN/CONTROLL/SHUTDOWN" then
-                shutOff()
             end
 
             log.namedTimer("CYCLE")
@@ -155,10 +158,11 @@ local function main()
 
             log.namedDebug("CYCLE")
             log.draw()
+
+            os.sleep(1) -- Without it clicks dont get registered properly gets mitigated with split server
         end
 
-
-        log.error("Shuttind Down")
+        log.error("Shutting Down")
         m_reactor.shutDownRedstoneIOs()
         return 1
     end

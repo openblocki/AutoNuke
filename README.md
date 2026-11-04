@@ -2,6 +2,8 @@
 Vac-Nuke Manager for GTNH  </br>
 Made for usage to be a Simple as Possible </br>
 
+INFO: Clicks my not Register instantly. You may need to click multiple Times for Actions like SCRAM, Shutdown, or Revert Override
+
 INFO: While in Overriden State the Reactor will not be Controlled or Maintained by AutoNuke for that it has to be taken out of Override either by Deleting their Reactor File from the Database, or using the ReActivate Button in the UI </br>
 If the Reason for its override is not Resolved it may get overriden again </br>
 

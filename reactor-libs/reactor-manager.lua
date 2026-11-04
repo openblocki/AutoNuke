@@ -37,9 +37,9 @@ local unknown_reactors = {}
 -----HELPERS
 
 local function sendShutdownToNetwork() -- These Events allow other Programs to Receive the info that the Reactors have Shut Down
-    local modem = require("modem")
+    --local modem = require("modem")
 
-    modem.broadcast(0, "AN/E-SHUTDOWN")
+    --modem.broadcast(0, "AN/E-SHUTDOWN")
     event.push("AN/E-SHUTDOWN")
 end
 
@@ -48,7 +48,7 @@ local function SCRAM(reason) -- Rewrite Done
     log.scram("SHUTTING DOWN REDSTONE IOS!")
     shutDownRedstoneIOs()
 
-    for reactor in reactors do
+    for _, reactor in pairs(reactors) do
         log.scram("SCRAMMING REACTOR " .. reactor:getID() .. "!")
         reactor:SCRAM(reason or "Reactor Manager Panicked")
     end
@@ -63,6 +63,12 @@ end
 local addToWidget = function(address, object)
     log.error("Widget Registrar has not been set Properly - SCRAMMING for safety")
     SCRAM()
+end
+
+local getWidget = function (_)
+    log.error("Widget Getter has not been set Properly - SCRAMMING for safety")
+    SCRAM()
+    return nil
 end
 ------------------------------------------------------------------------
 -----LOAD / STARTUP
@@ -186,7 +192,7 @@ local function updateWidget()
     gpu.setForeground(0xffffff)
 
     gpu.set(3, 13, "   │Reactor       │Heat  │Output      │Status")
-    gpu.set(3, 14, "───┼──────────────┼──────┼────────────┼───────────────────────────")
+    gpu.set(3, 14, "───┼──────────────┼──────┼────────────┼───────────────────────────────────")
     local reactor_display_format = " %s | %12s │ %3d%% │ %6dEU/t | %s"
 
     local count = 0
@@ -200,17 +206,17 @@ local function updateWidget()
         local statusColor = reactor:getStatusColor()
 
         gpu.setBackground(statusColor)
-        gpu.fill(3, 15 + count, 66, 1, " ")
+        gpu.fill(3, 15 + count, 76, 1, " ")
         gpu.set(3, 15 + count, string.format(reactor_display_format, onOff, address, heat, output, status))
-        addToWidget(address, {
+        if reactor.override and not getWidget(address) then addToWidget(address, {
             isReactor = true,
             x = 3,
-            y = 15 + count,
+            y = 15 + count-1,
             width = 66,
             height = 1,
             info = "Override for Reactor " .. address .. " has been Revoked by user",
             callback = function() reactor:deactivateOverride("Reactivation by User") end
-        })
+        }) end
         count = count + 1
     end
     gpu.setBackground(0x6a7a94)
@@ -233,10 +239,12 @@ end
 
 ------------------------------------------------------------------------
 -----SETUP
-local function setup(addToWidget)
+local function setup(addToWidgetFunc, getWidgetFunc)
     log.info("Starting Reactor Setup.")
     log.draw()
 
+    addToWidget = addToWidgetFunc
+    getWidget = getWidgetFunc
     db:setPath("reactors")
     configdb:setPath("config")
 
@@ -255,14 +263,14 @@ local function setup(addToWidget)
 end
 
 local function setupWidget()
-    gpu.fill(1, 10, 70, 41, " ")
+    gpu.fill(1, 10, 80, 41, " ")
     gpu.set(1, 10, "Reactors")
     gpu.setBackground(0x6a7a94)
-    gpu.fill(3, 11, 66, 39, " ")
+    gpu.fill(3, 11, 76, 39, " ")
     updateWidget()
 
     if (#reactors > 20) then
-        gpu.set(3, 11, "Too Many Reactors can't display all!!!")
+        gpu.set(3, 11, "Too Many Reactors. Can't display all!!!")
     end
 end
 

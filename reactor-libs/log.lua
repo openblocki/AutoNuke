@@ -1,7 +1,7 @@
 local component = require("component")
 local gpu = component.gpu
 
-local left = 80
+local left = 90
 local top = 30
 
 local width= 80
@@ -51,14 +51,14 @@ local function draw()
 end
 
 local function setupWidget()
-  gpu.fill(73, 24, 88, 28, " ")
-  gpu.set(73, 24, "LOG")
+  gpu.fill(83, 24, 88, 28, " ")
+  gpu.set(83, 24, "LOG")
   draw()
 end
 
 local function log(m)
-  --if m.data == VERBOSE then return end
-  if #LOG==20 then
+  if m.data == VERBOSE then return end
+  if #LOG==24 then
     table.remove(LOG,1)
   end
   table.insert(LOG,m)
