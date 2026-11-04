@@ -58,7 +58,7 @@ end
 
 local function log(m)
   if m.data == VERBOSE then return end
-  if #LOG==24 then
+  if #LOG==25 then
     table.remove(LOG,1)
   end
   table.insert(LOG,m)
