@@ -67,6 +67,9 @@ function Reactor:setup()
     local reactor_layout = layout.getReactorLayout(c.COOLANT[self.coolant], c.ROD[self.rod])
 
     if c.MOX_BEHAVIOUR[self.rod] then
+        log.info("Warming up Reactor ".. self:getShortID())
+        log.info("This may take a while.")
+        log.draw()
         self:warmUp()
     end
 
