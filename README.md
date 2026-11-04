@@ -48,10 +48,10 @@ NaK</br>
 Currently Supportet Fuel:</br>
 Glowstone (Only meant for Testing)</br>
 Uranium</br>
-MoX (Including Heat Capacity - System can't heat up by itself yet)</br>
+MOX (Including Heat Capacity - System heats up by itself)</br>
 High Density Uranium</br>
 Excited Uranium</br>
-High Density Plutonium</br>
+High Density Plutonium (Including Heat Capacity - System heats up by itself)</br>
 
 ## ```!INFO! This was made without the use of any AI. 100% Handmade.``` </br>
 
