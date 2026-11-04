@@ -103,7 +103,7 @@ end
 function Reactor:warmUp()
     local currentHeatPercentage = self:getHeatPercentage()
     local heatGoal = c.REACTOR.HEAT.WARMUP_MOX
-    if currentHeatPercentage/100 >= heatGoal then
+    if currentHeatPercentage >= heatGoal*100 then
         log.info("Warmup Phase was cancelled as Reactor " .. self:getShortID() .." is already at or over Heat Goal")
         log.info("Current Heat: " .. currentHeatPercentage .. "%. Heat Goal: "..heatGoal*100 .."%")
         log.draw()
@@ -114,7 +114,7 @@ function Reactor:warmUp()
     self:changeFuelRodInSlot(1) -- One Rod may be to slow, maybe increase that
 
     self:activate()
-     while self:getHeatPercentage() < heatGoal do
+     while self:getHeatPercentage() < heatGoal*100 do
         os.sleep(0.5) -- Lets the OS yield so this doesnt crash
      end
     self:deactivate()

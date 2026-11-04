@@ -231,7 +231,8 @@ local reactor_key = nil
 local function tick_all()
     log.namedTimer("TICK_ALL")
     local reactor = nil
-    reactor_key, reactor =  table.next(reactors, reactor_key)
+    reactor_key, reactor = next(reactors, reactor_key)
+    if not reactor then return end
     reactor:tick()
     --for _, reactor in pairs(reactors) do
     --    log.namedTimer("SINGLE_REACTOR")
@@ -239,7 +240,7 @@ local function tick_all()
     --    log.namedDebug("SINGLE_REACTOR")
     --end
 
-    os.sleep(0)
+    os.sleep(0.5)
     log.namedDebug("TICK_ALL")
     updateWidget()
 end
