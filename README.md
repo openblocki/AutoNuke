@@ -31,11 +31,11 @@ Interface can be filled With any Supportet Coolant or Rod. The Programm recogniz
 
 Each Adapter, Transpoder and Redstone IO can only touch one Reactor or else it wont work</br>
 
-I Recommend Installing after Building the Reactors as they only get Registered at the Start of the Program.</br>
+I Recommend Installing after Building the Reactors as they only get Registered during the Setup Phase => After a Reboot.</br>
 Installation Instructions: </br>
-1. run "pastebin get 7VLFzeqt inst.lua"  </br>
-2. run "inst" </br>
-3. run "AutoNuke" </br>
+1. run ```wget https://raw.githubusercontent.com/openblocki/AutoNuke/main/NukeInstaller.lua NukeInstaller.lua``` This Downloads the Installer for AutoNuke </br>
+2. run ```NukeInstaller``` This Runs the Installer </br>
+3. reboot the PC through ```reboot``` This allows the Computer to properly initialize everything and Auto Starts the Program </br>
 
 Setup UI looks a bit bad Right now, but it should be readable
 
@@ -53,8 +53,6 @@ High Density Uranium</br>
 Excited Uranium</br>
 High Density Plutonium</br>
 
-
-
 !INFO! This was made without the use of any AI. 100% Handmade. </br>
 
 
@@ -68,10 +66,7 @@ Idea:
     Main Script distributes the Reactors and Manages LSC, Database, Reactor Setup / Registration, User SCRAM / ShutOff events.
     Allows for more interactive UI since the Main PC doesnt waste too much Time on Reactor Management
 
-    Manager does event.push("AN/MANAGER/PING") (or modem.broadcast) regulary
-. If a Sub Server goes without PING for more than 10 Cycles it Shuts off automaticaly.
+    Manager does event.push("AN/MANAGER/PING") (or modem.broadcast) regulary. If a Sub Server goes without PING for more than 10 Cycles it Shuts off automaticaly.
 
-    Sub Servers send event.push("AN/SERVER/PONG", {[reactor_data = {active = boolean, status = string, status_color = string, etc...}]}) for the main PC to Display the Reactor Data.
-    Also maybe if main Server goes without PONG from a sub Server it sends a wake signal to that server (https://ocdoc.cil.li/component:modem)
-    if it then doesnt receive a pong signal after like 5 seconds it shuts down the reactors of that server
+    Sub Servers send event.push("AN/SERVER/PONG", {[reactor_data = {active = boolean, status = string, status_color = string, etc...}]}) for the main PC to Display the Reactor Data. Also maybe if main Server goes without PONG from a sub Server it sends a wake signal to that server => https://ocdoc.cil.li/component:modem and if it then doesnt receive a pong signal after like 5 seconds it shuts down the reactors of that server
 ´´´
