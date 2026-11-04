@@ -74,3 +74,8 @@ Idea:
 
     Sub Servers send event.push("AN/SERVER/PONG", {[reactor_data = {active = boolean, status = string, status_color = string, etc...}]}) for the main PC to Display the Reactor Data. Also maybe if main Server goes without PONG from a sub Server it sends a wake signal to that server => https://ocdoc.cil.li/component:modem and if it then doesnt receive a pong signal after like 5 seconds it shuts down the reactors of that server
 ```
+
+
+Not so important Todos: </br>
+- Create UI Framework so i dont have to deal with gpu.fill(x, y, width, height, " ")
+- Make UI look better (im not a graphical designer)
