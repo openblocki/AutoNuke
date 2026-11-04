@@ -65,6 +65,11 @@ end
 function Reactor:setup()
     local inventory = self.transposer.getAllStacks(c.REACTOR.SIDE)
     local reactor_layout = layout.getReactorLayout(c.COOLANT[self.coolant], c.ROD[self.rod])
+
+    if c.MOX_BEHAVIOUR[self.rod] then
+        self:warmUp()
+    end
+
     ::setupReactor::
     local successfull_finish = true
     local slot = 1
