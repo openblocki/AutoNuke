@@ -14,7 +14,7 @@ Using fuels like "The Core" with Helium Coolant is Probably a Bad Idea. </br>
 INFO: The Program will not Stop the Reactor from Running if its Missing Fuel Cells since that will only Decrease Output and not increase Heat
 
 WIP Reactors warm up Automatically to 90% Heat during Setup Phase if they recognize any of the MOX based Fuel Rods. </br>
-Any of these Thresholds can be configured to your liking in reactor_conf.lua. This is not recommended though
+Any of these Thresholds can be configured to your liking in ```reactor_conf.lua```. This is not recommended though
 
 Reactor Setup: </br>
 <img width="2560" height="1057" alt="2026-11-03_15 16 56" src="https://github.com/user-attachments/assets/590f0939-c753-4ee8-84e7-4047e912c346" />
@@ -35,11 +35,11 @@ I Recommend Installing after Building the Reactors as they only get Registered d
 Installation Instructions: </br>
 1. run ```wget https://raw.githubusercontent.com/openblocki/AutoNuke/main/NukeInstaller.lua NukeInstaller.lua``` This Downloads the Installer for AutoNuke </br>
 2. run ```NukeInstaller``` This Runs the Installer </br>
-3. reboot the PC through ```reboot``` This allows the Computer to properly initialize everything and Auto Starts the Program </br>
+3. run ```reboot``` This allows the Computer to properly initialize everything and Auto Starts the Program </br>
 
 Setup UI looks a bit bad Right now, but it should be readable
 
-CURRENTLY SUPPORTET COOLANT:</br>
+Currently Supportet Coolants:</br>
 Helium</br>
 NaK</br>
 540k SP Coolant</br>
@@ -53,12 +53,16 @@ High Density Uranium</br>
 Excited Uranium</br>
 High Density Plutonium</br>
 
-!INFO! This was made without the use of any AI. 100% Handmade. </br>
+## ```!INFO! This was made without the use of any AI. 100% Handmade.``` </br>
 
 
-IMPORTANT TODOS:
+IMPORTANT TODOS: </br>
+Rewrite Readme to look better and read easier.
 
-```Allow the Programm to delegate Reactor Ticks to Multiple Servers / Tier 1 CPUs => Parallel Reactor Management
+Take better Pictures of the Setup Process
+
+Allow the Programm to delegate Reactor Ticks to Multiple Servers / Tier 1 CPUs => Parallel Reactor Management
+```
 Idea:
     This Script runs on a Main PC / Server
     The Sub Servers just run the Reactor Tick Loop over and over with os.sleep(0.5) or os.sleep(0.1) to allow for yielding and event.listen()
@@ -69,4 +73,4 @@ Idea:
     Manager does event.push("AN/MANAGER/PING") (or modem.broadcast) regulary. If a Sub Server goes without PING for more than 10 Cycles it Shuts off automaticaly.
 
     Sub Servers send event.push("AN/SERVER/PONG", {[reactor_data = {active = boolean, status = string, status_color = string, etc...}]}) for the main PC to Display the Reactor Data. Also maybe if main Server goes without PONG from a sub Server it sends a wake signal to that server => https://ocdoc.cil.li/component:modem and if it then doesnt receive a pong signal after like 5 seconds it shuts down the reactors of that server
-´´´
+```
