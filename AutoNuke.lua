@@ -83,7 +83,7 @@ local function getWidget(address)
     return widget[address]
 end
 
-local function userClick(x, y)
+local function userClick(_,_,x, y,_,_)
     for k, wid in pairs(widget) do
         if x > wid.x and x < wid.x+wid.width and y > wid.y and y < wid.y+wid.height then
             log.info(wid.info)
@@ -137,18 +137,20 @@ local function main()
 
 
     setupWidgedBorders()
+    screen.setTouchModeInverted(false)
+
+    event.listen("touch", userClick)
 
     local function protected_main()
         m_reactor.shutDownRedstoneIOs()
 
         while keepAlive do
-            local eventType, _, x, y, _, _ = event.pull(1)
+            --local eventType, _, x, y, _, _ = event.pull(1)
 
-            screen.setTouchModeInverted(false)
 
-            if eventType == "touch" then
-                userClick(x, y)
-            end
+            --if eventType == "touch" then
+            --    userClick(x, y)
+            --end
 
             log.namedTimer("CYCLE")
             m_lsc.tick()
@@ -159,7 +161,7 @@ local function main()
             log.namedDebug("CYCLE")
             log.draw()
 
-            os.sleep(1) -- Without it clicks dont get registered properly gets mitigated with split server
+            --os.sleep(0) -- Without it clicks dont get registered properly gets mitigated with split server
         end
 
         log.error("Shutting Down")

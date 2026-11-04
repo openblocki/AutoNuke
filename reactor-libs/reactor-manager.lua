@@ -226,13 +226,20 @@ local function updateWidget()
     gpu.set(3, 15 + count, "INFO: If a Reactor has been Overriden, to ReActivate Click on that Reactor.")
 end
 
+local reactor_key = nil
+
 local function tick_all()
     log.namedTimer("TICK_ALL")
-    for _, reactor in pairs(reactors) do
-        log.namedTimer("SINGLE_REACTOR")
-        reactor:tick() --0.35 In Blank Run
-        log.namedDebug("SINGLE_REACTOR")
-    end
+    local reactor = nil
+    reactor_key, reactor =  table.next(reactors, reactor_key)
+    reactor:tick()
+    --for _, reactor in pairs(reactors) do
+    --    log.namedTimer("SINGLE_REACTOR")
+    --    reactor:tick() --0.35 In Blank Run
+    --    log.namedDebug("SINGLE_REACTOR")
+    --end
+
+    os.sleep(0)
     log.namedDebug("TICK_ALL")
     updateWidget()
 end

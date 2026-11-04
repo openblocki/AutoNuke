@@ -15,6 +15,8 @@ Using fuels like "The Core" with Helium Coolant is Probably a Bad Idea. </br>
 
 INFO: The Program will not Stop the Reactor from Running if its Missing Fuel Cells since that will only Decrease Output and not increase Heat
 
+INFO: DO NOT REMOVE COOLANT WHILE A REACTOR IS RUNNING - The Program can only do so much to keep it from Exploding
+
 WIP Reactors warm up Automatically to 90% Heat during Setup Phase if they recognize any of the MOX based Fuel Rods. </br>
 Any of these Thresholds can be configured to your liking in ```reactor_conf.lua```. This is not recommended though
 
