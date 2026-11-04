@@ -43,14 +43,14 @@ local function sendShutdownToNetwork() -- These Events allow other Programs to R
     event.push("AN/E-SHUTDOWN")
 end
 
-local function SCRAM() -- Rewrite Done
+local function SCRAM(reason) -- Rewrite Done
     log.scram("COMPLETE SCRAM INITATED!")
     log.scram("SHUTTING DOWN REDSTONE IOS!")
     shutDownRedstoneIOs()
 
     for reactor in reactors do
         log.scram("SCRAMMING REACTOR " .. reactor:getID() .. "!")
-        reactor:SCRAM()
+        reactor:SCRAM(reason or "Reactor Manager Panicked")
     end
 
     log.scram("SENDING SHUTDOWN SIGNAL TO NETWORK")
@@ -59,6 +59,11 @@ local function SCRAM() -- Rewrite Done
     log.scram("SCRAM COMPLETED. RESTART COMPUTER TO REINITIALIZE!")
 end
 
+
+local addToWidget = function(address, object)
+    log.error("Widget Registrar has not been set Properly - SCRAMMING for safety")
+    SCRAM()
+end
 ------------------------------------------------------------------------
 -----LOAD / STARTUP
 
@@ -70,18 +75,19 @@ local function loadReactor(data) -- Rewrite Done
 end
 
 local function loadUnknownReactor(data) -- Rewrite Done
-    local tranpsoser=component.proxy(data.transposer_a)
-    local interface_coolant = tranpsoser.getStackInSlot(c.INTERFACE.SIDE,2)
-    local interface_rod = tranpsoser.getStackInSlot(c.INTERFACE.SIDE,1)
+    local tranpsoser = component.proxy(data.transposer_a)
+    local interface_coolant = tranpsoser.getStackInSlot(c.INTERFACE.SIDE, 2)
+    local interface_rod = tranpsoser.getStackInSlot(c.INTERFACE.SIDE, 1)
     if interface_rod then
         for k, v in pairs(c.ROD) do
             if v == interface_rod.name then
                 interface_rod = k
             end
         end
-        log.info("Auto Detected Fuel ".. interface_rod .. " for Reactor ".. data.adapter_a)
+        log.info("Auto Detected Fuel " .. interface_rod .. " for Reactor " .. data.adapter_a)
     else
-        interface_rod = term_helper.multiSelect("Fuel Rod for Reactor ".. data.adapter_a, c.ROD, "GLOWSTONE", c.ROD.GLOWSTONE)
+        interface_rod = term_helper.multiSelect("Fuel Rod for Reactor " .. data.adapter_a, c.ROD, "GLOWSTONE",
+            c.ROD.GLOWSTONE)
     end
     if interface_coolant then
         for k, v in pairs(c.COOLANT) do
@@ -89,9 +95,10 @@ local function loadUnknownReactor(data) -- Rewrite Done
                 interface_coolant = k
             end
         end
-        log.info("Auto Detected Coolant ".. interface_coolant .. " for Reactor ".. data.adapter_a)
+        log.info("Auto Detected Coolant " .. interface_coolant .. " for Reactor " .. data.adapter_a)
     else
-        interface_coolant = term_helper.multiSelect("Coolant for Reactor ".. data.adapter_a, c, "HELIUM", c.COOLANT.HELIUM)
+        interface_coolant = term_helper.multiSelect("Coolant for Reactor " .. data.adapter_a, c, "HELIUM",
+            c.COOLANT.HELIUM)
     end
     data.coolant = interface_coolant
     data.rod = interface_rod
@@ -195,10 +202,22 @@ local function updateWidget()
         gpu.setBackground(statusColor)
         gpu.fill(3, 15 + count, 66, 1, " ")
         gpu.set(3, 15 + count, string.format(reactor_display_format, onOff, address, heat, output, status))
-
+        addToWidget(address, {
+            isReactor = true,
+            x = 3,
+            y = 15 + count,
+            width = 66,
+            height = 1,
+            info = "Override for Reactor " .. address .. " has been Revoked by user",
+            callback = function() reactor:deactivateOverride("Reactivation by User") end
+        })
         count = count + 1
     end
     gpu.setBackground(0x6a7a94)
+    gpu.setForeground(0x999999)
+
+    gpu.fill(3, 15 + count, 66, 1, " ")
+    gpu.set(3, 15 + count, "INFO: If a Reactor has been Overriden, to ReActivate Click on that Reactor.")
 end
 
 local function tick_all()
@@ -214,7 +233,7 @@ end
 
 ------------------------------------------------------------------------
 -----SETUP
-local function setup()
+local function setup(addToWidget)
     log.info("Starting Reactor Setup.")
     log.draw()
 

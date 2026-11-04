@@ -17,6 +17,7 @@ local filesTD = {
     libs .. "reactor.lua",
     libs .. "reactor_conf.lua",
     libs .. "term_helper.lua",
+    libs .. "widget_helper.lua",
 }
 
 fs.makeDirectory(home .. libs)

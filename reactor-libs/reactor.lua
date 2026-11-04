@@ -455,7 +455,7 @@ function Reactor:activateOverride(reason)
     self.override = true
 end
 
-function Reactor:deactivateOverride()
+function Reactor:deactivateOverride(reason)
     log.warn("ReActivating Reactor " .. self:getShortID() .. ".")
     log.warn("Normal behavior will continue in next Reactor Tick")
     log.warn("Defaulting to OFF State")
@@ -463,7 +463,7 @@ function Reactor:deactivateOverride()
 
     self:shutOff()
     self.override = false
-    self.override_reason = "No Reason Set"
+    self.override_reason = reason or "No Reason Set"
 end
 
 -- Retrieves ID of Reactor \

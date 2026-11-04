@@ -6,26 +6,62 @@ local term = require("term")
 local gpu = component.gpu
 local screen = component.screen
 local event = require("event")
-
+screen.setPrecise(true)
 local keepAlive = false
 
 local function SCRAM()
     m_reactor.SCRAM()
 end
 
+local border_width = 2
+local border_height = 1
+
+local function shutOff()
+    keepAlive = false
+end
+
+local widget = {
+    shutDown = {
+        x = 90,
+        y = 5,
+        width = 10,
+        height = 5,
+        info = "User sent for ShutDown - Deactivating at end of Cycle",
+        callback = shutOff
+    },
+    SCRAM = {
+        x = 110,
+        y = 5,
+        width = 50,
+        height = 15,
+        info = "User sent for SCRAM - God help us all.",
+        callback = SCRAM
+    }
+}
+
+local function drawBox(x,y, width, height, color, borderColor)
+    gpu.setBackground(borderColor)
+    gpu.fill(x,y,width,height, " ")
+
+    gpu.setBackground(color)
+    gpu.fill(x+border_width, y+border_height, width-border_width*2, height-border_height*2)
+end
+
+local function drawText(text, x, y, color)
+    gpu.setForeground(color)
+    gpu.set(x,y, text)
+end
+
 local function setupWidgedBorders()
-    gpu.setBackground(0x6b0014)
-    gpu.fill(90, 5, 60, 15, " ")
 
-    gpu.setBackground(0xb30021)
-    gpu.fill(92, 6, 56, 13, " ")
+    drawBox(widget.shutDown.x, widget.shutDown.y, widget.shutDown.width, widget.shutDown.height, 0xb30021 , 0x6b0014)
+    drawText("SHUTDOWN", 95, 8, 0xaed1ce)
 
-    gpu.setForeground(0xaed1ce)
-    gpu.set(95, 8, "SHUTDOWN")
+    drawBox(widget.SCRAM.x, widget.SCRAM.y, widget.SCRAM.width, widget.SCRAM.height, 0xb30021 , 0x6b0014)
+    drawText("SCRAM SCRAM SCRAM", widget.SCRAM.x+3, widget.SCRAM.y+3, 0xffffff)
 
-    gpu.setBackground(0x3f3b47)
     gpu.setForeground(0xf1f72a)
-
+    gpu.setBackground(0x3f3b47)
     m_lsc.setupWidget()
 
     gpu.setBackground(0x3f3b47)
@@ -39,16 +75,19 @@ local function setupWidgedBorders()
     gpu.setForeground(0x0e6900)
 end
 
-local function shutOff()
-    keepAlive = false
+local function addToWidget(address, object)
+    table.insert(widget, address, object)
 end
 
 local function userClick(x, y)
-    if x > 90 and x < 150 and y > 5 and y < 20 then
-        log.info("User sent for ShutOff - Shutton down at the end of Cycle")
-        log.draw()
-        shutOff()
-        return false
+    for k, wid in widget do
+        if x > wid.x and x < wid.x+wid.width and y > wid.y and y < wid.y+wid.height then
+            log.info(wid.info)
+            log.draw()
+            wid.callback()
+            table.remove(widget, k)
+            return wid.isReactor or false
+        end
     end
 
     return true
@@ -69,7 +108,7 @@ local function main()
 
     log.info("SETTING UP REACTORS")
 
-    local reactor_setup_result = m_reactor.setup()
+    local reactor_setup_result = m_reactor.setup(addToWidget)
 
     if not reactor_setup_result then
         log.error("REACTOR SETUP NOT SUCCESSFULL. SCRAMMING!")
@@ -137,7 +176,7 @@ end
 term.clear()
 main()
 
-event.ignore("touch", shutOff)
+event.ignore("touch", userClick)
 log.error("EOF")
 gpu.setBackground(0x000000)
 term.clear()
