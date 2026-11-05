@@ -364,7 +364,7 @@ function Reactor:checkHeat()
 
     log.error("Reactor " .. self:getShortID() .. " went over the Heat threshold. ")
     log.error(heat ..
-    "/" .. maxHeat .. " => " .. (maxHeat/heat)*100 .. "%")
+    "/" .. maxHeat .. " => " .. (heat/maxHeat)*100 .. "%")
     self:SCRAM("HEAT THRESHOLD OVERSTEPPED")
 end
 
@@ -512,7 +512,7 @@ end
 function Reactor:getStatusColor()
     if self.override then return 0x61c8ff end
     if not self:isActive() then return 0x3b3838 end
-    if not self.status == "Running Fine" and not self.status == "Idling" then return 0xff9d00 end
+    if self.status ~= "Running Fine" and self.status ~= "Idling" then return 0xff9d00 end
     if self:isActive() then return 0x009407 end
     return 0x009407
 end
