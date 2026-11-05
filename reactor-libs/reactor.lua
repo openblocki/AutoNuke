@@ -65,7 +65,7 @@ function Reactor:new(data)
 end
 
 function Reactor:setup()
-    local inventory = self.transposer.getAllStacks(c.REACTOR.SIDE)
+    
     local reactor_layout = layout.getReactorLayout(c.COOLANT[self.coolant], c.ROD[self.rod])
 
     if c.MOX_BEHAVIOUR[self.rod] then
@@ -76,6 +76,7 @@ function Reactor:setup()
     end
 
     ::setupReactor::
+    local inventory = self.transposer.getAllStacks(c.REACTOR.SIDE)
     local successfull_finish = true
     local slot = 1
 
