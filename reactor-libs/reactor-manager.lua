@@ -138,12 +138,12 @@ local function loadReactors() -- Rewrite Done
 
     for _, v in pairs(reactors) do
         for x, y in pairs(transposers) do
-            if y == v.data.transposer then
+            if y == v.data.transposer_a then
                 table.remove(transposers, x)
             end
         end
         for x, y in pairs(redstone_ios) do
-            if y == v.data.redstone_ios then
+            if y == v.data.redstone_io_a then
                 table.remove(redstone_ios, x)
             end
         end
