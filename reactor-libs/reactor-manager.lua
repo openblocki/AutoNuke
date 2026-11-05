@@ -103,7 +103,7 @@ local function loadUnknownReactor(data) -- Rewrite Done
         end
         log.info("Auto Detected Coolant " .. interface_coolant .. " for Reactor " .. data.adapter_a)
     else
-        interface_coolant = term_helper.multiSelect("Coolant for Reactor " .. data.adapter_a, c, "HELIUM",
+        interface_coolant = term_helper.multiSelect("Coolant for Reactor " .. data.adapter_a, c.COOLANT, "HELIUM",
             c.COOLANT.HELIUM)
     end
     data.coolant = interface_coolant
