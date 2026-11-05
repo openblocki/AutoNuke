@@ -61,9 +61,9 @@ local function needsPower()
 
     if(lsc.POWER<lsc.TURNONPOWER) then return true end
 
-    event.push("AN/LOG/UNEXPECTED", "LSC Function :needsPower(): moved unexpected")
+    --event.push("AN/LOG/UNEXPECTED", "LSC Function :needsPower(): moved unexpected")
 
-    return false
+    return true
 end
 
 local function getLSC()
