@@ -4,62 +4,64 @@ local component = require("component")
 local lsc = require("reactor-libs.lsc-manager")
 local layout = require("reactor-libs.reactor-layout")
 
-local Reactor = {
-    reactor_chamber = nil, --PROXY
-    transposer = nil,      --PROXY
-    redstone_io = nil,     --PROXY
+--local Reactor = {
+ --   reactor_chamber = nil, --PROXY
+  --  transposer = nil,      --PROXY
+   -- redstone_io = nil,     --PROXY
 
-    maxHeat = 100, -- Defaults to 100 to SCRAM quickly in case of bad Setup
-    coolant = nil,
-    rod = nil,
+--    maxHeat = 100, -- Defaults to 100 to SCRAM quickly in case of bad Setup
+  --  coolant = nil,
+    --rod = nil,
 
-    override = false,
-    override_reason = "No Reason Specified",
+    --override = false,
+    --override_reason = "No Reason Specified",
 
-    coolant_slot = 1,
+    --coolant_slot = 1,
 
-    skip_cycle = false,
+    --skip_cycle = false,
 
-    status = "No Status Set",
+    --status = "No Status Set",
 
-    data = {
-        adapter_a = nil, -- Acts as ID of Reactor
-        transposer_a = nil,
-        redstone_io_a = nil,
-        maxheat = 100 -- Defaults to 100 to SCRAM quickly in case of bad Setup
-    }
-}
+    --data = {
+      --  adapter_a = nil, -- Acts as ID of Reactor
+--        transposer_a = nil,
+        --redstone_io_a = nil,
+        --maxheat = 100 -- Defaults to 100 to SCRAM quickly in case of bad Setup
+    --}
+--}
 
 local function throw(message)
     log.error(message)
     error(message)
 end
 
+
+Reactor.__index = Reactor
+
 function Reactor:new(data)
-    local instance = setmetatable({}, self)
-    self.__index = self
+    local o = setmetatable({}, Reactor)
+    
+    o.coolant = data.coolant or c.DEFAULT.COOLANT
+    o.rod = data.rod or c.DEFAULT.ROD
 
-    self.coolant = data.coolant or c.DEFAULT.COOLANT
-    self.rod = data.rod or c.DEFAULT.ROD
-
-    self.reactor_chamber = component.proxy(data.adapter_a) or
+    o.reactor_chamber = component.proxy(data.adapter_a) or
     throw("PROXY FOR REACTOR ADAPTER " .. data.adapter_a .. " NOT FOUND!")
-    self.transposer = component.proxy(data.transposer_a) or
+    o.transposer = component.proxy(data.transposer_a) or
     throw("PROXY FOR REACTOR TRANSPOSER " .. data.transposer_a .. " NOT FOUND!")
-    self.redstone_io = component.proxy(data.redstone_io_a) or
+    o.redstone_io = component.proxy(data.redstone_io_a) or
     throw("PROXY FOR REACTOR REDSTONE_IO " .. data.redstone_io_a .. " NOT FOUND!")
 
-    self.maxHeat = self.reactor_chamber.getMaxHeat() or 100
+    o.maxHeat = o.reactor_chamber.getMaxHeat() or 100
 
-    self.override = data.override or false
-    self.override_reason = data.override_reason or "No Reason Specified"
+    o.override = data.override or false
+    o.override_reason = data.override_reason or "No Reason Specified"
 
-    self.data.maxHeat = self.maxHeat
-    self.data.adapter_a = data.adapter_a
-    self.data.transposer_a = data.transposer_a
-    self.data.redstone_io_a = data.redstone_io_a
-
-    return instance
+    o.data = {
+        adapter_a = data.adapter_a,
+        transposer_a = data.transposer_a,
+        redstone_io_a = data.redstone_io.da
+    }
+    return o
 end
 
 function Reactor:setup()
@@ -177,7 +179,8 @@ function Reactor:changeCoolantInSlot(slot)
         goto retryCoolant
     elseif interfaceItem.name ~= c.COOLANT[self.coolant] then
         log.error("Interface Provided wrong Coolant for Reactor " .. self:getShortID())
-        self:override("INTERFACE PROVIDED WRONG COOLANT: " .. interfaceItem.name)
+        self:activateOverride("INTERFACE PROVIDED WRONG COOLANT: " .. interfaceItem.name)
+        return
     end
 
     self.transposer.swap(c.INTERFACE.SIDE, c.REACTOR.SIDE, if_slot, slot)
@@ -218,7 +221,8 @@ function Reactor:tick()
         return
     end
     self:checkHeat()                               -- 0.05
-
+    if self.override then return end
+    
     local coolant, rods = self:getContents()       -- 0.049
 
     self:checkCoolant(coolant)                     -- 0.0
@@ -417,7 +421,7 @@ local function removeAllFuelRods(self)
     local slot = 1
     for item in self.transposer.getAllStacks(c.REACTOR.SIDE) do -- Remove If check to increase Speed
         if not item then goto next end
-        if item.name == self.rod then
+        if item.name == c.ROD[self.rod] then
             self.transposer.transferItem(c.REACTOR.SIDE, c.INTERFACE.SIDE, 1, slot, 9)
         end
         ::next::
@@ -429,7 +433,7 @@ local function removeAllCoolant(self)
     local slot = 1
     for item in self.transposer.getAllStacks(c.REACTOR.SIDE) do
         if not item then goto next end
-        if item.name == self.coolant then
+        if item.name == c.COOLANT[self.coolant] then
             self.transposer.transferItem(c.REACTOR.SIDE, c.INTERFACE.SIDE, 1, slot, 9)
         end
         ::next::
@@ -460,7 +464,7 @@ function Reactor:activateOverride(reason)
     log.warn("Defaulting to OFF State")
     log.draw()
 
-    self:shutOff()
+    self:deactivate()
     self.override_reason = reason or "No Reason Set"
     self.override = true
 end
