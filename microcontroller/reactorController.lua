@@ -28,6 +28,8 @@ local sleepTime     = 1
 local address       = computer.address()
 local rIO           = nil -- Allows the MicroController to shut down its own RedstoneIO in case of Distress
 
+local isActive      = false
+
 local signal        = {
     STARTUP = "AN/MICROCONTROLLER/STARTUP",
     REBOOT = "AN/MICROCONTROLLER/REBOOT",
@@ -39,6 +41,99 @@ local signal        = {
 }
 
 -- ==================================================
+
+
+local function deactivate()
+    isActive = false
+    computer.pushSignal(signal.DISTRESS, address)
+    rIO.setOutput(1, 0)
+    rIO.setOutput(0, 0)
+end
+
+
+local function writeToFile(path, data)
+    local file, err = fs.open(path, "w")
+    if not file then
+        print("ERROR: NOT ABLE TO CREATE / OPEN FILE")
+        deactivate()
+        error("File Error", err)
+
+        return
+    end
+
+    file:write(data)
+    file:close()
+end
+
+local function activate()
+    isActive = true
+end
+
+
+local function swapCoolant(slot)
+    local counter = 0
+
+    repeat
+        local success = t.swap(sideInterface, sideNuke, indexCoolant, slot, true)
+        if not success then counter = counter + 1 end
+        if counter > 2 then
+            deactivate()
+            return -1
+        end
+        computer.pullSignal(0.1)
+    until success
+end
+
+local function swapFuelRod(slot)
+    local counter = 0
+    repeat
+        local success = t.swap(sideInterface, sideNuke, indexFuel, slot, true)
+        if not success then counter = counter + 1 end
+        if counter > 2 then computer.pushSignal(signal.DIMINISHED, address) end -- When a Controller is Diminished, Server waits for 2 PONGS until
+        if counter > 5 then break end
+        computer.pullSignal(0.1)
+    until success
+end
+
+local function getReactorLayout(C, R)
+    return { C, R, R, R, C, R, R, C, R,
+        R, R, C, R, R, R, R, C, R,
+        C, R, R, R, R, C, R, R, R,
+        R, R, R, C, R, R, R, R, C,
+        R, C, R, R, R, R, C, R, R,
+        R, C, R, R, C, R, R, R, C }
+end
+
+local function fillReactor(cool, rod)
+    ::setupReactor::
+    local inventory = t.getAllStacks(sideNuke)
+    local successfull_finish = true
+    local slot = 1
+    local layout = getReactorLayout(cool, rod)
+
+    for item in inventory do
+        if item and item.name ~= layout[slot] then
+            successfull_finish = false
+
+            if not item.name then
+                item.name = "Empty"
+            end
+
+            if item.name == coolant then
+                if swapCoolant(slot) then
+                    deactivate()
+                    error("COULD NOT SUCCESSFULLY SWAP COOLANT")
+                end
+            else
+                swapFuelRod(slot)
+            end
+        end
+        slot = slot + 1
+    end
+    if not successfull_finish then
+        goto setupReactor
+    end
+end
 
 local function setup()
     computer.pushSignal(signal.NEEDS_SETUP, address)
@@ -59,12 +154,19 @@ local function setup()
     local rod = t.getStackInSlot(1, indexFuel).name or gt .. "rodUranium4"
 
     depleted = gt .. "depletedR" .. string.sub(rod, string.len(gt) + 1, string.len(rod))
-end
 
-local function deactivate()
-    computer.pushSignal(signal.DISTRESS)
-    rIO.setOutput(1, 0)
-    rIO.setOutput(0, 0)
+    local data = {
+        rIO_Address = setup_data.redstoneIO_a,
+        coolant = coolant,
+        depleted = depleted
+    }
+
+    writeToFile("cache", serialize.serialize(data))
+
+    fillReactor(coolant, rod)
+
+    print("Setup done")
+    isActive = true
 end
 
 local function SCRAM()
@@ -72,28 +174,16 @@ local function SCRAM()
 end
 
 local function tickReactor()
-    while true do
+    while isActive do
         local itemsInNuke = t.getAllStacks(sideNuke)
 
         for slot, item in ipairs(itemsInNuke) do
             if not item then SCRAM() end
             if item.name == coolant and item.damage >= maxDamage then
-                local counter = 0
-
-                repeat
-                    local success = t.swap(sideInterface, sideNuke, indexCoolant, slot, true)
-                    if not success then counter = counter + 1 end
-                    if counter > 2 then computer.pushSignal(signal.DISTRESS, address) end -- Send Shutdown Signal to Manager => RedstoneIO gets shut Down & Micro gets Idle Signal
-                    computer.pullSignal(0.1)
-                until success
+                local result = swapCoolant(slot)
+                if result then return end
             elseif item.name == depleted then
-                local counter = 0
-                repeat
-                    local success = t.swap(sideInterface, sideNuke, indexFuel, slot, true)
-                    if not success then counter = counter + 1 end
-                    if counter > 2 then computer.pushSignal(signal.DIMINISHED, address) end -- When a Controller is Diminished, Server waits for 2 PONGS until
-                    computer.pullSignal(0.1)
-                until success
+                swapFuelRod(slot)
             end
         end
 
@@ -101,6 +191,7 @@ local function tickReactor()
         computer.pullSignal(sleepTime)
     end
 end
+
 
 
 local function main()
@@ -118,15 +209,24 @@ local function main()
             depleted = cache.depleted
         end
     else
-        setup()
-        computer.pushSignal(signal.SETUP_DONE)
+        local _, error = pcall(setup)
+        if error then
+            SCRAM()
+            return
+        end
+        computer.pushSignal(signal.SETUP_DONE, address)
     end
 
-    pcall(tickReactor)
+    local _, error = pcall(tickReactor)
+    if error then
+        writeToFile("latest.log", error)
+    end
+
     computer.pushSignal(signal.REBOOT, address)
-    computer.beep("...---...") -- Give a Hearable Signal its Rebooting
-    computer.shutDown(true)    -- Try to Reboot by itself
+    computer.shutDown(true) -- Try to Reboot by itself
 end
 
-
 main()
+deactivate()
+computer.beep("...---...") -- Give a Hearable Signal its Rebooting
+computer.shutDown(true)    -- Try to Reboot by itself
