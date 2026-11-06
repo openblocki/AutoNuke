@@ -7,6 +7,7 @@ local fs            = require("filesystem")
 local serialize     = require("serialization")
 local t             = component.proxy(component.list("transposer")())
 local computer      = require("computer")
+local event         = require("event")
 
 local gt            = "gregtech:gt."
 
@@ -22,11 +23,15 @@ local indexFuel     = 1
 
 local coolant       = gt .. "360k_Helium_Coolantcell"
 local depleted      = gt .. "depletedRodUranium4"
+local maxHeat       = 100
 
 local sleepTime     = 1
 
 local address       = computer.address()
 local rIO           = nil -- Allows the MicroController to shut down its own RedstoneIO in case of Distress
+local reactor       = nil
+
+local pingCount     = 0
 
 local isActive      = false
 
@@ -51,6 +56,12 @@ local function deactivate()
 end
 
 
+local function SCRAM()
+    deactivate()
+    event.push("AN/MICROCONTROLLER/SCRAMMED", address)
+    error("SCRAMMED")
+end
+
 local function writeToFile(path, data)
     local file, err = fs.open(path, "w")
     if not file then
@@ -65,11 +76,6 @@ local function writeToFile(path, data)
     file:close()
 end
 
-local function activate()
-    isActive = true
-end
-
-
 local function swapCoolant(slot)
     local counter = 0
 
@@ -83,6 +89,24 @@ local function swapCoolant(slot)
         computer.pullSignal(0.1)
     until success
 end
+
+local function isHeatThresholdGood() -- Non Triggering
+    local currentHeat = reactor.getHeat()
+    if currentHeat >= maxHeat * 0.5 then
+        return false
+    end
+
+    return true
+end
+
+local function checkHeat()
+    if isHeatThresholdGood() then
+        return
+    end
+
+    SCRAM()
+end
+
 
 local function swapFuelRod(slot)
     local counter = 0
@@ -105,50 +129,49 @@ local function getReactorLayout(C, R)
 end
 
 local function fillReactor(cool, rod)
-    ::setupReactor::
-    local inventory = t.getAllStacks(sideNuke)
-    local successfull_finish = true
-    local slot = 1
-    local layout = getReactorLayout(cool, rod)
+    repeat
+        local inventory = t.getAllStacks(sideNuke)
+        local successfull_finish = true
+        local slot = 1
+        local layout = getReactorLayout(cool, rod)
 
-    for item in inventory do
-        if item and item.name ~= layout[slot] then
-            successfull_finish = false
+        for item in pairs(inventory) do
+            if item and item.name ~= layout[slot] then
+                successfull_finish = false
 
-            if not item.name then
-                item.name = "Empty"
-            end
-
-            if item.name == coolant then
-                if swapCoolant(slot) then
-                    deactivate()
-                    error("COULD NOT SUCCESSFULLY SWAP COOLANT")
+                if not item.name then
+                    item.name = "Empty"
                 end
-            else
-                swapFuelRod(slot)
+
+                if item.name == coolant then
+                    if swapCoolant(slot) then
+                        deactivate()
+                        error("COULD NOT SUCCESSFULLY SWAP COOLANT")
+                        return
+                    end
+                else
+                    swapFuelRod(slot)
+                end
             end
+            slot = slot + 1
         end
-        slot = slot + 1
-    end
-    if not successfull_finish then
-        goto setupReactor
-    end
+    until successfull_finish
 end
 
 local function setup()
     computer.pushSignal(signal.NEEDS_SETUP, address)
-    local setup_data = { state = false }
-    repeat
-        local name, data = computer.pullSignal()
-        if name == "AU/SERVER/SETUPDATA/" .. address then
-            setup_data = data
-            setup_data.state = true
-        end
-    until setup_data.state
+    local setup_data = nil
+    setup_data = event.pull(nil,"AU/SERVER/SETUPDATA/"..address)
 
     rIO = component.proxy(setup_data.redstoneIO_a)
+    reactor = component.proxy(setup_data.adapter_a)
 
-    if not rIO then computer.pushSignal(signal.DISTRESS) end
+    if not reactor then SCRAM() end
+    maxHeat = reactor.getMaxHeat()
+
+    if not rIO then SCRAM() end
+    rIO.setOutput(1, 0)
+    rIO.setOutput(0, 0)
 
     coolant = t.getStackInSlot(1, indexCoolant).name or coolant
     local rod = t.getStackInSlot(1, indexFuel).name or gt .. "rodUranium4"
@@ -157,6 +180,7 @@ local function setup()
 
     local data = {
         rIO_Address = setup_data.redstoneIO_a,
+        adapter_a = setup_data.adapter_a,
         coolant = coolant,
         depleted = depleted
     }
@@ -169,12 +193,18 @@ local function setup()
     isActive = true
 end
 
-local function SCRAM()
-    deactivate()
+
+local function endOfCycle()
+    if pingCount > 20 then
+        SCRAM()
+    end
+
+    pingCount = pingCount + 1
 end
 
 local function tickReactor()
     while isActive do
+        checkHeat()
         local itemsInNuke = t.getAllStacks(sideNuke)
 
         for slot, item in ipairs(itemsInNuke) do
@@ -189,13 +219,32 @@ local function tickReactor()
 
         computer.pushSignal(signal.PONG, address)
         computer.pullSignal(sleepTime)
+        endOfCycle()
     end
 end
 
+local function turnOff()
+    rIO.setOutput(1, 0)
+    rIO.setOutput(0, 0)
+    isActive = false
+    return true
+end
 
+local function turnOn() --Microcontroller is only allowed to turn its rIO on here
+    rIO.setOutput(1, 1)
+    rIO.setOutput(0, 1)
+    isActive = true
+    return true
+end
+
+local function receivedPing()
+    pingCount = 0
+    return true
+end
 
 local function main()
     computer.pushSignal(signal.STARTUP, address)
+    event.pull(nil, "AN/SERVER/RECEIVED/" .. address)
 
     if fs.exists("cache") then
         local cache = nil
@@ -205,8 +254,12 @@ local function main()
             cache_file:close()
             cache = serialize.unserialize(data)
             rIO = component.proxy(cache.rIO_Address)
+            reactor = component.proxy(cache.adapter_a)
             coolant = cache.coolant
             depleted = cache.depleted
+
+            rIO.setOutput(1, 0)
+            rIO.setOutput(0, 0)
         end
     else
         local _, error = pcall(setup)
@@ -216,6 +269,12 @@ local function main()
         end
         computer.pushSignal(signal.SETUP_DONE, address)
     end
+
+    event.listen("AU/SERVER/PING", receivedPing)
+    event.listen("AU/SERVER/SCRAM", SCRAM)
+    event.listen("AU/SERVER/ACTIVATE", turnOn)
+    event.listen("AU/SERVER/DEACTIVATE", turnOff)
+
 
     local _, error = pcall(tickReactor)
     if error then
@@ -230,3 +289,30 @@ main()
 deactivate()
 computer.beep("...---...") -- Give a Hearable Signal its Rebooting
 computer.shutDown(true)    -- Try to Reboot by itself
+
+--[[
+
+function Reactor:warmUp()
+    local currentHeatPercentage = self:getHeatPercentage()
+    local heatGoal = c.REACTOR.HEAT.WARMUP_MOX
+    if currentHeatPercentage >= heatGoal*100 then
+        log.info("Warmup Phase was cancelled as Reactor " .. self:getShortID() .." is already at or over Heat Goal")
+        log.info("Current Heat: " .. currentHeatPercentage .. "%. Heat Goal: "..heatGoal*100 .."%")
+        log.draw()
+        return 1
+    end
+
+    self:deactivate()
+    self:changeFuelRodInSlot(1) -- One Rod may be to slow, maybe increase that
+
+    self:activate()
+     while self:getHeatPercentage() < heatGoal*100 do
+        os.sleep(0.5) -- Lets the OS yield so this doesnt crash
+     end
+    self:deactivate()
+
+    log.info("Warm Up for Reactor ".. self:getShortID() .. " finished. Continuing Setup.")
+    log.draw()
+    self.transposer.transferItem(c.REACTOR.SIDE, c.INTERFACE.SIDE, 1, 1, 9)
+end
+]]

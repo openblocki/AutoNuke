@@ -1,11 +1,10 @@
 local log = require("reactor-libs.log")
-local c = require("reactor-libs.reactor_conf")
 local t_helper = require("reactor-libs.term_helper")
 local DB = require("reactor-libs.db")
 local REACTOR = require("reactor-libs.reactor")
-local term_helper = require("reactor-libs.term_helper")
 
 local event = require("event")
+local e_client, e_server = require("events")
 local term = require("term")
 local component = require("component")
 local gpu = component.gpu
@@ -29,8 +28,10 @@ shutDownRedstoneIOs()
 ------------------------------------------------------------------------
 -----VARIABLES
 local reactors = {}
-local transposers = {}
+local adapters = {}
+local known_adapters = {}
 local redstone_ios = {}
+local known_redstone_ios = {}
 local unknown_reactors = {}
 
 ------------------------------------------------------------------------
@@ -80,40 +81,6 @@ local function loadReactor(data) -- Rewrite Done
     return reactor
 end
 
-local function loadUnknownReactor(data) -- Rewrite Done
-    local tranpsoser = component.proxy(data.transposer_a)
-    local interface_coolant = tranpsoser.getStackInSlot(c.INTERFACE.SIDE, 2)
-    local interface_rod = tranpsoser.getStackInSlot(c.INTERFACE.SIDE, 1)
-    if interface_rod then
-        for k, v in pairs(c.ROD) do
-            if v == interface_rod.name then
-                interface_rod = k
-            end
-        end
-        log.info("Auto Detected Fuel " .. interface_rod .. " for Reactor " .. data.adapter_a)
-    else
-        interface_rod = term_helper.multiSelect("Fuel Rod for Reactor " .. data.adapter_a, c.ROD, "GLOWSTONE",
-            c.ROD.GLOWSTONE)
-    end
-    if interface_coolant then
-        for k, v in pairs(c.COOLANT) do
-            if v == interface_coolant.name then
-                interface_coolant = k
-            end
-        end
-        log.info("Auto Detected Coolant " .. interface_coolant .. " for Reactor " .. data.adapter_a)
-    else
-        interface_coolant = term_helper.multiSelect("Coolant for Reactor " .. data.adapter_a, c, "HELIUM",
-            c.COOLANT.HELIUM)
-    end
-    data.coolant = interface_coolant
-    data.rod = interface_rod
-
-    local reactor = loadReactor(data)
-
-    db:addObject(reactor:getData(), reactor:getID())
-end
-
 local function loadReactors() -- Rewrite Done
     for a, _ in component.list("reactor_chamber", true) do
         log.info("Reactor Chamber Found: " .. a)
@@ -150,44 +117,47 @@ local function loadReactors() -- Rewrite Done
     end
 end
 
-local function resolveUnknownReactors()
-    log.info("Resolving Unknown Reactors")
-    for _, adapter in pairs(unknown_reactors) do
+local function getAdapters() --Rewrite done for ClientServer
+    local count = 1
+    for a, _ in component.list("reactor_chamber", true) do
+        if known_adapters[a] then goto next end
+        adapters[count] = a
+        count = count + 1
+        ::next::
+    end
+end
+
+local function getRedstoneIOs() --Rewrite done for ClientServer
+    local count = 1
+    for a, _ in component.list("redstone", true) do
+        if known_redstone_ios[a] then goto next end
+        redstone_ios[count] = a
+        count = count + 1
+        ::next::
+    end
+end
+
+local function resolveUnknownReactor(address) --Rewrite done for ClientServer
         gpu.setBackground(0x000000)
         term.clear()
 
-        local transposer, tKey = t_helper.multiSelectNoDefault("Transposer for Reactor " .. adapter, transposers)
-        local redstone_io, rKey = t_helper.multiSelectNoDefault("Redstone IO for Reactor " .. adapter, redstone_ios)
+        local adapter, aKey = t_helper.multiSelectNoDefault("Adapter for Reactor " .. address, getAdapters())
+        local redstone_io, rKey = t_helper.multiSelectNoDefault("Redstone IO for Reactor " .. address, getRedstoneIOs())
 
-        loadUnknownReactor({
+        local data = {
             adapter_a = adapter,
-            transposer_a = transposer,
-            redstone_io_a = redstone_io
-        })
+            redstone_io_a = redstone_io,
+            id = address,
+            status = "Setting Up"
+        }
 
-        table.remove(transposers, tKey)
+        table.remove(adapters, aKey)
         table.remove(redstone_ios, rKey)
-    end
-    unknown_reactors = {}
+
+        return data
 end
 
-local function getTransposers()
-    local count = 1
-    for a, _ in component.list("transposer", true) do
-        transposers[count] = a
-        count = count + 1
-    end
-end
-
-local function getRedstoneIOs()
-    local count = 1
-    for a, _ in component.list("redstone", true) do
-        redstone_ios[count] = a
-        count = count + 1
-    end
-end
-
-local function updateWidget()
+local function updateWidget() -- Needs Rewrite
     gpu.setBackground(0x6a7a94)
     gpu.setForeground(0xffffff)
 
@@ -226,46 +196,33 @@ local function updateWidget()
     gpu.set(3, 15 + count, "INFO: If a Reactor has been Overriden, to ReActivate Click on that Reactor.")
 end
 
-local reactor_key = nil
-
-local function tick_all()
-    log.namedTimer("TICK_ALL")
-    local reactor = nil
-    reactor_key, reactor = next(reactors, reactor_key)
-    if not reactor then return end
-    reactor:tick()
-    --for _, reactor in pairs(reactors) do
-    --    log.namedTimer("SINGLE_REACTOR")
-    --    reactor:tick() --0.35 In Blank Run
-    --    log.namedDebug("SINGLE_REACTOR")
-    --end
-
-    os.sleep(0.5)
-    log.namedDebug("TICK_ALL")
-    updateWidget()
-end
-
 ------------------------------------------------------------------------
 -----SETUP
-local function setup(addToWidgetFunc, getWidgetFunc)
+
+local function setup(addToWidgetFunc, getWidgetFunc) --rewrite done ?
     log.info("Starting Reactor Setup.")
     log.draw()
 
     addToWidget = addToWidgetFunc
     getWidget = getWidgetFunc
+
     db:setPath("reactors")
     configdb:setPath("config")
 
-    getTransposers()
-    getRedstoneIOs()
-    loadReactors()
-    resolveUnknownReactors()
-    -- Rewrite Done
-    for _, reactor in pairs(reactors) do
-        reactor:setup()
-        log.draw()
+    local reactor_list = db:getById("reactor_list")
+    reactors = reactor_list
+
+    for reactor in pairs(reactors) do
+        known_adapters[reactor.adapter_a] = true
+        known_redstone_ios[reactor.redstone_io_a] = true
     end
-    log.info("Reactor Setup Complete!")
+
+    getRedstoneIOs()
+    getAdapters()
+
+    if #adapters>0 then log.info("New Reactors found. Waiting for Setup Call") end
+
+    log.info("Reactor Mananger Setup Complete!")
     log.draw()
     return 1
 end
@@ -282,11 +239,59 @@ local function setupWidget()
     end
 end
 
+local function clientStartup(address)
+    if reactors[address] then reactors[address].status = "Starting Up" end
+    e_server.startupreceived(address)
+    return true
+end
+
+local function clientReboot(address)
+    if reactors[address] then reactors[address].status = "Rebooting" end
+
+    return true
+end
+
+local function clientPong(address)
+    if not reactors[address] then return true end
+    if reactors[address].diminshed or reactors[address].scrammed or reactors[address].distress then return true end
+    reactors[address].status = "Running Fine"
+    reactors[address].lastPong = 0
+
+    return true
+end
+
+local function clientDistress(address)
+    if not reactors[address] then return true end
+    if reactors[address].scrammed then return true end
+
+    reactors[address].scrammed = true
+    reactors[address].status = "SCRAMMED"
+
+    return true
+end
+
+local function clientNeedsSetup(address)
+    reactors[address] = resolveUnknownReactor(address)
+    e_server.setupdata(address, reactors[address])
+
+    return true
+end
+
+local function clientSetupDone(address)
+    reactors[address].status = "Setup Done"
+
+    return true
+end
+
 return {
     setup = setup,
     SCRAM = SCRAM,
-    tick_all = tick_all,
     shutDownRedstoneIOs = shutDownRedstoneIOs,
     updateWidget = updateWidget,
-    setupWidget = setupWidget
-}
+    setupWidget = setupWidget,
+    clientDistress = clientDistress,
+    clientNeedsSetup = clientNeedsSetup,
+    clientPong = clientPong,
+    clientReboot = clientReboot,
+    clientSetupDone = clientSetupDone,
+    clientStartup = clientStartup,}

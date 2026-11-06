@@ -78,8 +78,6 @@ function Reactor:shutOff()
     self:checkRods(rods)
 end
 
-
-
 -- @param reason<string?> = "SCRAM"
 function Reactor:SCRAM(reason)
     log.scram("SCRAMMING REACTOR")

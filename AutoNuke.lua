@@ -6,6 +6,11 @@ local term = require("term")
 local gpu = component.gpu
 local screen = component.screen
 local event = require("event")
+local e_client, e_server = require("events")
+
+local DB = require("reactor-libs.db")
+local db = DB:new()
+
 screen.setPrecise(true)
 local keepAlive = false
 
@@ -101,25 +106,14 @@ end
 local function main()
     local width = 160
     local height = 50
+    screen.setTouchModeInverted(false)
 
     keepAlive = true
 
     gpu.setBackground(0x000000)
     gpu.setResolution(width, height)
 
-    log.info("INITIALIZING REACTOR SEQUENCE")
-
-    log.info("SETTING UP REACTORS")
-
-    local reactor_setup_result = m_reactor.setup(addToWidget, getWidget)
-
-    if not reactor_setup_result then
-        log.error("REACTOR SETUP NOT SUCCESSFULL. SCRAMMING!")
-        SCRAM()
-        error("REACTOR SETUP NOT SUCCESSFULL")
-        return -1
-    end
-    log.info("REACTORS SET UP")
+    event.listen("AU/")
 
     log.info("SETTING UP LSC")
     local lsc_setup_result = m_lsc.setup()
@@ -137,31 +131,31 @@ local function main()
 
 
     setupWidgedBorders()
-    screen.setTouchModeInverted(false)
 
     event.listen("touch", userClick)
+    event.listen(e_client.startup, m_reactor.clientStartup)
+    event.listen(e_client.reboot, m_reactor.clientReboot)
+    event.listen(e_client.pong, m_reactor.clientPong)
+    event.listen(e_client.distress, m_reactor.clientDistress)
+    event.listen(e_client.diminshed, m_reactor.clientDiminished)
+    event.listen(e_client.needs_setup, m_reactor.clientNeedsSetup)
+    event.listen(e_client.setup_done, m_reactor.clientSetupDone)
+    event.listen(e_client.scrammed, m_reactor.clientScrammed)
+
 
     local function protected_main()
         m_reactor.shutDownRedstoneIOs()
 
         while keepAlive do
-            --local eventType, _, x, y, _, _ = event.pull(1)
-
-
-            --if eventType == "touch" then
-            --    userClick(x, y)
-            --end
-
             log.namedTimer("CYCLE")
             m_lsc.tick()
             m_lsc.drawLSCStatus()
-
-            m_reactor.tick_all()
+            event.pull()
+            m_reactor.updateWidget()
 
             log.namedDebug("CYCLE")
             log.draw()
-
-            --os.sleep(0) -- Without it clicks dont get registered properly gets mitigated with split server
+            event.pull()
         end
 
         log.error("Shutting Down")
@@ -170,6 +164,8 @@ local function main()
     end
 
     local status, err = pcall(protected_main)
+
+    db:addObject("reactor_list", m_reactor.reactors)
 
     if not status then
         m_reactor.shutDownRedstoneIOs()
